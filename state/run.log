@@ -321,3 +321,27 @@ This iconic downtown Dubai spectacle highlights world-famous architecture and vi
 [dry-run] [ig] SKIPPED: IG_ACCESS_TOKEN and/or IG_USER_ID are unset.
 
 [finish] Processed 1 video(s).
+
+===== RUN 2026-09-17T22:49:02.826859+00:00Z =====
+[start] max_uploads=1, dry_run=True
+[drive] Found 12 pending video(s) in Drive Inbox.
+
+-------- Processing: de6369f5-5996-4ccb-9c2f-bb6c00fa672f.mp4 (ID: 15_XgdlH5vvWy-efqK_0Aup-Z8Kp3JC1H, Created: 2026-09-17T18:55:51.197Z) --------
+[drive] Downloading de6369f5-5996-4ccb-9c2f-bb6c00fa672f.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: video_ai_gemini
+[meta] Model used: gemini-flash-lite-latest
+[meta] Title (45 chars): Dubai Fountain Show and Burj Khalifa at Night
+[meta] Description:
+Witness the spectacular Dubai Fountain water show illuminated against the night sky.
+Marvel at the stunning architecture and vibrant light displays of the iconic Burj Khalifa.
+Experience the vibrant nightlife and iconic landmarks of Downtown Dubai.
+
+#Dubai #BurjKhalifa #DubaiFountain
+[meta] Tags (13 items, 180 chars): ['shorts', 'Dubai Fountain', 'Burj Khalifa', 'Dubai nightlife', 'Downtown Dubai', 'water fountain show', 'Dubai lights', 'luxury Dubai', 'Dubai architecture', 'night view', 'Dubai travel', 'city landmarks', 'light show']
+[meta] Hashtags: ['#Dubai', '#BurjKhalifa', '#DubaiFountain']
+[dry-run] Successfully generated and verified metadata for de6369f5-5996-4ccb-9c2f-bb6c00fa672f.mp4 (15_XgdlH5vvWy-efqK_0Aup-Z8Kp3JC1H).
+[ig] disabled by config.
+
+[finish] Processed 1 video(s).
