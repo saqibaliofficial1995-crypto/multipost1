@@ -138,11 +138,11 @@ def validate_metadata(data, duration=0, channel_topic=""):
 def discover_model(api_key):
     """Discovers available models for the given API key and selects the best free-tier model."""
     preferred = [
+        "gemini-flash-latest",
+        "gemini-3.5-flash",
         "gemini-3.6-flash",
         "gemini-3.7-flash",
         "gemini-3.8-flash",
-        "gemini-3.5-flash",
-        "gemini-flash-latest",
         "gemini-2.0-flash",
         "gemini-1.5-flash",
     ]
