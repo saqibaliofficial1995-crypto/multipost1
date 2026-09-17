@@ -100,17 +100,27 @@ def validate_metadata(data, duration=0, channel_topic="", is_text_only=False):
             print(f"[llm_meta] Validation reject (text_ai restricted): Title contains forbidden framing: '{title}'")
             return None
 
-    # Description lines check (2 to 5 lines)
+    # Description lines processing: 2 to 5 lines with hook in first 2 lines
     desc_lines = [clean_text(l) for l in raw_desc.splitlines() if l.strip()]
-    if len(desc_lines) < 2:
-        return None
+    if len(desc_lines) == 1:
+        # Split sentences to produce multi-line hook & supporting lines
+        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", desc_lines[0]) if s.strip()]
+        if len(sentences) >= 2:
+            desc_lines = sentences
+        elif len(sentences) == 1:
+            desc_lines = [sentences[0], f"Exclusive {channel_topic or 'luxury'} highlights."]
+    elif len(desc_lines) == 0:
+        desc_lines = [f"Experience the finest {channel_topic or 'luxury lifestyle'}.", f"Subscribe for daily updates."]
+
     if len(desc_lines) > 5:
         desc_lines = desc_lines[:5]
     desc = "\n".join(desc_lines)
 
-    # Validate tags (10 to 15 items, total under 460 chars)
-    if not isinstance(tags, list):
-        return None
+    # Normalize tags
+    if isinstance(tags, str):
+        tags = [t.strip() for t in tags.split(",") if t.strip()]
+    elif not isinstance(tags, list):
+        tags = []
 
     clean_tags = []
     seen = set()
@@ -120,25 +130,45 @@ def validate_metadata(data, duration=0, channel_topic="", is_text_only=False):
             seen.add(clean_t.lower())
             clean_tags.append(clean_t)
 
-    if len(clean_tags) < 5:
-        return None
-    clean_tags = clean_tags[:15]
-
     # For videos <= 60s, keep 'shorts' in tags
-    if duration <= 60:
-        if "shorts" not in [t.lower() for t in clean_tags]:
-            clean_tags.insert(0, "shorts")
-            if len(clean_tags) > 15:
-                clean_tags = clean_tags[:15]
+    if duration <= 60 and "shorts" not in seen:
+        clean_tags.insert(0, "shorts")
+        seen.add("shorts")
+
+    # Ensure 10 to 15 tags by supplementing from niche pool
+    if len(clean_tags) < 10:
+        base_pool = [
+            "luxury", "lifestyle", "dubai", "millionaire", "billionaire",
+            "supercars", "mansion", "wealth", "aesthetic", "vip", "exclusive", "rich", "viral"
+        ]
+        if channel_topic:
+            for w in channel_topic.split():
+                if w.lower() not in seen and len(w) > 2:
+                    clean_tags.append(w.capitalize())
+                    seen.add(w.lower())
+        for bp in base_pool:
+            if len(clean_tags) >= 12:
+                break
+            if bp.lower() not in seen:
+                clean_tags.append(bp)
+                seen.add(bp.lower())
+
+    clean_tags = clean_tags[:15]
 
     # Enforce total tags string length under 460 characters
     while clean_tags and len(",".join(clean_tags)) >= 460:
         clean_tags.pop()
 
-    if not clean_tags:
+    if len(clean_tags) < 5:
+        print(f"[llm_meta] Validation reject: Insufficient tags ({len(clean_tags)})")
         return None
 
     # Exactly 3 clean hashtags
+    if isinstance(hashtags, str):
+        hashtags = [h.strip() for h in re.findall(r"#?\w+", hashtags) if h.strip()]
+    elif not isinstance(hashtags, list):
+        hashtags = []
+
     clean_hashtags = []
     for h in hashtags:
         tag = re.sub(r"[^A-Za-z0-9_]", "", str(h)).strip()
@@ -173,11 +203,12 @@ def validate_metadata(data, duration=0, channel_topic="", is_text_only=False):
 def discover_models(api_key):
     """Discovers available models for the given API key and returns prioritized list."""
     preferred = [
+        "gemini-flash-lite-latest",
         "gemini-flash-latest",
         "gemini-3.5-flash",
         "gemini-3.6-flash",
+        "gemini-3.1-flash-lite",
         "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
         "gemini-1.5-flash",
     ]
     headers = {"x-goog-api-key": api_key, "Accept": "application/json"}
@@ -206,7 +237,7 @@ def discover_models(api_key):
             print(f"[llm_meta] Models list failed (HTTP {r.status_code}): {r.text}")
     except Exception as e:
         print(f"[llm_meta] Model discovery warning: {e}")
-    return ["gemini-flash-latest", "gemini-3.5-flash", "gemini-3.6-flash"]
+    return ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.5-flash", "gemini-3.6-flash"]
 
 
 def discover_model(api_key):
@@ -399,7 +430,9 @@ Output MUST be raw valid JSON adhering strictly to this schema:
                 except Exception as parse_err:
                     print(f"[llm_meta] Attempt {attempt} response parse error: {parse_err}")
 
-            if status_code == 503:
+                if len(candidate_models) > 1:
+                    model_idx += 1
+            elif status_code == 503:
                 consecutive_503 += 1
                 print(f"[llm_meta] Attempt {attempt}/{max_attempts} returned 503 Service Unavailable ({consecutive_503} in a row).")
                 if consecutive_503 >= 1 and len(candidate_models) > 1:
