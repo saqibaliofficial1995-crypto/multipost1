@@ -366,6 +366,14 @@ def step_3_youtube_auth(state):
 # =====================================================================
 # STEP 4: Meta Graph API Setup (Facebook & Instagram)
 # =====================================================================
+def _pipe_gh_secret(name, val, repo=None):
+    cmd = ["gh", "secret", "set", name]
+    if repo:
+        cmd.extend(["--repo", repo])
+    proc = subprocess.run(cmd, input=str(val).encode("utf-8"), capture_output=True)
+    return proc.returncode == 0
+
+
 def step_4_meta_setup(state):
     step_header(4, "Meta Graph API (Facebook Page & Instagram)", state.is_completed(4))
     if should_skip_step(state, 4):
@@ -376,69 +384,57 @@ def step_4_meta_setup(state):
     GRAPH = "https://graph.facebook.com/v21.0"
 
     print("Configure Facebook Page and linked Instagram Business/Creator account.")
-    print("Prerequisites: developers.facebook.com app with 'Facebook Login' and 'Instagram Graph API'.")
-    print("Permissions required in Graph API Explorer:")
-    print("  pages_show_list, pages_read_engagement, pages_manage_posts,")
-    print("  instagram_basic, instagram_content_publish, business_management\n")
+    print("Tokens are piped directly to GitHub Secrets via stdin (never echoed, never written to disk).\n")
 
-    app_id = input("Enter Meta App ID: ").strip()
-    if not app_id:
-        print("[FAIL] App ID cannot be empty.")
-        sys.exit(1)
-    state.set_val("meta_app_id", app_id)
-
-    app_secret = getpass.getpass("Enter Meta App Secret (hidden): ").strip()
-    if not app_secret:
-        print("[FAIL] App Secret cannot be empty.")
+    user_token = getpass.getpass("Enter Meta User Token (hidden): ").strip()
+    if not user_token:
+        print("[FAIL] Meta User Token cannot be empty.")
         sys.exit(1)
 
-    short_token = getpass.getpass("Enter Short-lived User Token from Graph API Explorer (hidden): ").strip()
-    if not short_token:
-        print("[FAIL] Short-lived token cannot be empty.")
-        sys.exit(1)
+    app_id = input("Enter Meta App ID (or press Enter if using pre-exchanged long-lived token): ").strip()
+    if app_id:
+        app_secret = getpass.getpass("Enter Meta App Secret (hidden): ").strip()
+        if app_secret:
+            print("\n[1/2] Exchanging user token for long-lived token (60 days)...")
+            try:
+                resp = requests.get(
+                    f"{GRAPH}/oauth/access_token",
+                    params={
+                        "grant_type": "fb_exchange_token",
+                        "client_id": app_id,
+                        "client_secret": app_secret,
+                        "fb_exchange_token": user_token,
+                    },
+                    timeout=30,
+                )
+                data = resp.json()
+                if "error" in data:
+                    err = data["error"]
+                    print(f"\n[FAIL-FAST ERROR] Token exchange failed: {err.get('message')}")
+                    sys.exit(1)
+                user_token = data["access_token"]
+                print("  - Long-lived user token obtained: True")
+            except Exception as e:
+                print(f"[FAIL-FAST ERROR] HTTP error during token exchange: {e}")
+                sys.exit(1)
 
-    # 1. Exchange short-lived -> long-lived user token (with FAIL-FAST check)
-    print("\n[1/2] Exchanging short-lived token for long-lived user token (60 days)...")
-    try:
-        resp = requests.get(
-            f"{GRAPH}/oauth/access_token",
-            params={
-                "grant_type": "fb_exchange_token",
-                "client_id": app_id,
-                "client_secret": app_secret,
-                "fb_exchange_token": short_token,
-            },
-            timeout=30,
-        )
-        data = resp.json()
-        if "error" in data:
-            err = data["error"]
-            err_msg = err.get("message", "Unknown error")
-            err_code = err.get("code", 0)
-            print(f"\n[FAIL-FAST ERROR] Meta token exchange failed (Code {err_code}): {err_msg}")
-            if err_code == 190 or "expired" in err_msg.lower():
-                print("--> The short-lived user token has already expired! Generate a fresh token in Graph API Explorer and re-run.")
-            sys.exit(1)
-        resp.raise_for_status()
-        long_user_token = data["access_token"]
-        print("  - Long-lived user token obtained: True")
-    except requests.RequestException as e:
-        print(f"[FAIL-FAST ERROR] Network/HTTP error during Meta token exchange: {e}")
-        sys.exit(1)
-
-    # 2. Fetch Pages and never-expiring Page Tokens
+    # 2. Fetch Pages and linked Instagram accounts
     print("[2/2] Fetching Facebook Pages and linked Instagram accounts...")
     try:
         p_resp = requests.get(
             f"{GRAPH}/me/accounts",
             params={
                 "fields": "id,name,access_token,instagram_business_account{id,username}",
-                "access_token": long_user_token,
+                "access_token": user_token,
             },
             timeout=30,
         )
+        p_data = p_resp.json()
+        if "error" in p_data:
+            print(f"[FAIL] Meta API error: {p_data['error'].get('message')}")
+            sys.exit(1)
         p_resp.raise_for_status()
-        pages = p_resp.json().get("data", [])
+        pages = p_data.get("data", [])
         if not pages:
             print("[FAIL] No Facebook Pages found for this account! Check your permissions.")
             sys.exit(1)
@@ -446,104 +442,64 @@ def step_4_meta_setup(state):
         print(f"[FAIL] Error retrieving Facebook Pages: {e}")
         sys.exit(1)
 
-    print(f"\nFound {len(pages)} Facebook Page(s):")
-    for i, pg in enumerate(pages):
-        ig = pg.get("instagram_business_account") or {}
-        ig_status = f"IG User ID: {ig.get('id')} (@{ig.get('username')})" if ig.get("id") else "No linked IG"
-        print(f"  [{i+1}] {pg['name']} (Page ID: {pg['id']}) | {ig_status}")
-
-    # 3. Page selection logic (auto-select if exactly one with linked IG)
+    # Filter pages with linked Instagram account
     pages_with_ig = [
         (i, pg)
         for i, pg in enumerate(pages)
         if pg.get("instagram_business_account") and pg["instagram_business_account"].get("id")
     ]
 
-    selected_idx = 0
-    if len(pages_with_ig) == 1:
-        selected_idx = pages_with_ig[0][0]
-        selected_page = pages[selected_idx]
-        ig_acc = selected_page.get("instagram_business_account") or {}
-        print(
-            f"\n[AUTO-SELECT] Exactly one Page with a linked Instagram account found: "
-            f"'{selected_page['name']}' (Page ID: {selected_page['id']}, IG: @{ig_acc.get('username')}). Automatically selected."
-        )
-    elif len(pages) > 1:
-        choice = input(f"\nSelect Page number [1-{len(pages)}]: ").strip()
+    if not pages_with_ig:
+        print("\n[FAIL] Found Facebook Page(s), but none have a linked Instagram Business/Creator account!")
+        for pg in pages:
+            print(f"  - Page: '{pg.get('name')}' (ID: {pg.get('id')}) -> No linked Instagram")
+        print("Please link your Instagram Professional/Creator account to your Page and re-run.")
+        sys.exit(1)
+
+    selected_idx = pages_with_ig[0][0]
+    if len(pages_with_ig) > 1:
+        print(f"\nFound {len(pages_with_ig)} Page(s) with linked Instagram:")
+        for idx, (orig_idx, pg) in enumerate(pages_with_ig):
+            ig = pg["instagram_business_account"]
+            print(f"  [{idx + 1}] {pg['name']} | Instagram: @{ig.get('username')}")
+        choice = input(f"Select Page [1-{len(pages_with_ig)}] (default 1): ").strip()
         try:
-            selected_idx = int(choice) - 1
-            if selected_idx < 0 or selected_idx >= len(pages):
-                selected_idx = 0
+            c = int(choice) - 1
+            if 0 <= c < len(pages_with_ig):
+                selected_idx = pages_with_ig[c][0]
         except ValueError:
-            selected_idx = 0
-        selected_page = pages[selected_idx]
-        ig_acc = selected_page.get("instagram_business_account") or {}
+            pass
+
+    selected_page = pages[selected_idx]
+    ig_acc = selected_page["instagram_business_account"]
+    page_name = selected_page["name"]
+    page_token = selected_page["access_token"]
+    ig_id = str(ig_acc["id"])
+    ig_username = ig_acc.get("username", "unknown")
+
+    # Print ONLY Page name and IG username for user confirmation
+    print("\n" + "-" * 50)
+    print(" CONFIRM META CREDENTIALS TO DEPLOY:")
+    print(f"  Page Name:          {page_name}")
+    print(f"  Instagram Username: @{ig_username}")
+    print("-" * 50)
+
+    repo_name = state.get_val("repo_name") or os.environ.get("GITHUB_REPOSITORY") or "bjviufutu-dot/multipost"
+    print(f"Deploying META_PAGE_TOKEN and IG_USER_ID straight to GitHub Secrets ({repo_name})...")
+
+    s1 = _pipe_gh_secret("META_PAGE_TOKEN", page_token, repo=repo_name)
+    s2 = _pipe_gh_secret("IG_USER_ID", ig_id, repo=repo_name)
+
+    if s1 and s2:
+        print("  - META_PAGE_TOKEN set in GitHub Secrets: True")
+        print("  - IG_USER_ID set in GitHub Secrets: True")
+        state.set_val("page_name", page_name)
+        state.set_val("ig_username", ig_username)
+        state.mark_completed(4)
+        print("\n[SUCCESS] Meta credentials deployed to GitHub Secrets via secure stdin.\n")
     else:
-        selected_page = pages[0]
-        ig_acc = selected_page.get("instagram_business_account") or {}
-
-    # 4. Check if chosen Page has no linked Instagram business account
-    if not ig_acc.get("id"):
-        print(f"\n[STOP] The chosen Page '{selected_page['name']}' (ID: {selected_page['id']}) has no linked Instagram business account!")
-        print("--> Instagram publishing is impossible until you link an Instagram Professional/Creator account in the Instagram app or Facebook Page settings.")
-        print("--> Please link your Instagram account to this Facebook Page and re-run.")
+        print(f"[FAIL] Failed setting secrets (META_PAGE_TOKEN: {s1}, IG_USER_ID: {s2}).")
         sys.exit(1)
-
-    # 5. Store the permanent Page token, FB page id, and IG user id
-    payload = {
-        "page_access_token": selected_page["access_token"],
-        "page_id": selected_page["id"],
-        "page_name": selected_page["name"],
-        "ig_user_id": ig_acc.get("id"),
-        "ig_username": ig_acc.get("username"),
-        "note": "Never-expiring Page Access Token for Multipost.",
-    }
-
-    TOKENS_DIR.mkdir(parents=True, exist_ok=True)
-    with open(META_TOKEN_FILE, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
-    try:
-        os.chmod(META_TOKEN_FILE, 0o600)
-    except Exception:
-        pass
-
-    state.set_val("page_id", selected_page["id"])
-    state.set_val("page_name", selected_page["name"])
-    state.set_val("ig_user_id", ig_acc.get("id"))
-    state.set_val("ig_username", ig_acc.get("username"))
-
-    # 6. Verify the Page token really works
-    print("\n[VERIFICATION] Verifying Page token with Graph API calls...")
-    try:
-        v_pg = requests.get(
-            f"{GRAPH}/{selected_page['id']}",
-            params={"fields": "name", "access_token": selected_page["access_token"]},
-            timeout=30,
-        )
-        v_pg.raise_for_status()
-        v_pg_data = v_pg.json()
-        print(f"  - GET /{selected_page['id']}?fields=name -> name: '{v_pg_data.get('name')}' (Valid: True)")
-
-        v_ig = requests.get(
-            f"{GRAPH}/{ig_acc['id']}",
-            params={"fields": "username", "access_token": selected_page["access_token"]},
-            timeout=30,
-        )
-        v_ig.raise_for_status()
-        v_ig_data = v_ig.json()
-        print(f"  - GET /{ig_acc['id']}?fields=username -> username: '@{v_ig_data.get('username')}' (Valid: True)")
-    except Exception as e:
-        print(f"[FAIL] Page token verification request failed: {e}")
-        sys.exit(1)
-
-    state.mark_completed(4)
-
-    print(f"\n[SUCCESS] Meta Page Token verified and saved to {META_TOKEN_FILE}.")
-    print(f"  - Page Name: {selected_page['name']}")
-    print(f"  - Page ID: {selected_page['id']}")
-    print(f"  - IG Username: @{ig_acc.get('username')}")
-    print(f"  - IG User ID: {ig_acc.get('id')}")
-    print(f"  - Permanent Token saved: True\n")
 
 
 # =====================================================================

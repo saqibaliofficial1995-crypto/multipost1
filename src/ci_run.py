@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import auth_env
 import drive_source
 import github_media_host
+import host_media
 import normalize
 import storage
 import upload_instagram_ci
@@ -250,6 +251,8 @@ def run(cfg, max_uploads=1, dry_run=False):
 
         if dry_run:
             log.write(f"[dry-run] Successfully generated and verified metadata for {file_name} ({file_id}).")
+            if not upload_instagram_ci.is_available(cfg):
+                log.write("[dry-run] [ig] SKIPPED: META_PAGE_TOKEN and/or IG_USER_ID are unset.")
             for p in [local_video, norm_video]:
                 if os.path.exists(p):
                     try:
@@ -259,35 +262,44 @@ def run(cfg, max_uploads=1, dry_run=False):
             processed_count += 1
             continue
 
-        # YouTube Upload
-        yt_id, yt_url = None, ""
-        try:
-            log.write("[yt] Uploading to YouTube...")
-            yt_id, yt_url = upload_youtube_ci.upload(cfg, norm_video, title, desc, tags)
-            log.write(f"[yt] Published successfully: {yt_url}")
-        except Exception as e:
-            log.write(f"[fail] YouTube upload failed: {e}")
-            item_state["attempts"] = attempts + 1
-            item_state["last_error"] = str(e)[:400]
-            save_state(state_file, state)
-            any_error = True
-            continue
+        # YouTube Upload (with state check to allow Instagram retries without duplicate YouTube uploads)
+        yt_id = item_state.get("youtube_video_id")
+        yt_url = item_state.get("youtube_url", "")
+        if yt_id:
+            log.write(f"[yt] Already published to YouTube ({yt_url}). Skipping re-upload.")
+        else:
+            try:
+                log.write("[yt] Uploading to YouTube...")
+                yt_id, yt_url = upload_youtube_ci.upload(cfg, norm_video, title, desc, tags)
+                log.write(f"[yt] Published successfully: {yt_url}")
+                item_state["youtube_video_id"] = yt_id
+                item_state["youtube_url"] = yt_url
+            except Exception as e:
+                log.write(f"[fail] YouTube upload failed: {e}")
+                item_state["attempts"] = attempts + 1
+                item_state["last_error"] = str(e)[:400]
+                save_state(state_file, state)
+                any_error = True
+                continue
 
         # Instagram Upload (via GitHub Releases temporary asset host or S3)
-        ig_id, ig_permalink = None, ""
-        if upload_instagram_ci.is_available(cfg):
-            gh_token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+        ig_id = item_state.get("instagram_id")
+        ig_permalink = item_state.get("instagram_permalink", "")
+        if ig_id:
+            log.write(f"[ig] Already published to Instagram ({ig_permalink}). Skipping.")
+        elif upload_instagram_ci.is_available(cfg):
+            media_token = os.environ.get("MEDIA_REPO_TOKEN") or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+            media_owner = os.environ.get("MEDIA_REPO_OWNER") or os.environ.get("GITHUB_REPOSITORY_OWNER") or "bjviufutu-dot"
             media_repo = os.environ.get("MEDIA_REPO", "multipost-media")
-            media_owner = os.environ.get("MEDIA_REPO_OWNER") or os.environ.get("GITHUB_REPOSITORY_OWNER")
 
             public_url = None
             rel_info = None
 
             try:
-                if gh_token and media_owner:
+                if media_token and media_owner:
                     log.write(f"[ig] Hosting video via temporary release on {media_owner}/{media_repo}...")
-                    public_url, rel_info = github_media_host.create_release_and_upload(
-                        gh_token, media_owner, media_repo, norm_video
+                    public_url, rel_info = host_media.upload_media(
+                        norm_video, token=media_token, owner=media_owner, repo=media_repo
                     )
                 elif storage.available():
                     log.write("[ig] Hosting video via S3/R2 storage...")
@@ -298,14 +310,18 @@ def run(cfg, max_uploads=1, dry_run=False):
                     log.write("[ig] Publishing Reel to Instagram...")
                     caption = f"{title}\n\n{desc}" if desc else title
                     ig_id, ig_permalink = upload_instagram_ci.upload(cfg, public_url, caption)
-                    log.write(f"[ig] Published successfully: {ig_permalink}")
+                    if ig_id:
+                        log.write(f"[ig] Published successfully: {ig_permalink}")
+                        item_state["instagram_id"] = ig_id
+                        item_state["instagram_permalink"] = ig_permalink
                 else:
-                    log.write("[ig] SKIPPED: No media host configured (set GH_TOKEN or S3 secrets).")
+                    log.write("[ig] SKIPPED: No media host configured (set MEDIA_REPO_TOKEN/GH_TOKEN or S3 secrets).")
             except Exception as e:
                 log.write(f"[warn] Instagram publish error: {e}")
+                item_state["instagram_error"] = str(e)[:400]
             finally:
-                if gh_token and rel_info:
-                    github_media_host.cleanup_release(gh_token, rel_info)
+                if rel_info:
+                    host_media.delete_media(rel_info, token=media_token)
         else:
             log.write("[ig] SKIPPED: META_PAGE_TOKEN and/or IG_USER_ID are unset.")
 
