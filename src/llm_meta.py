@@ -140,7 +140,7 @@ def discover_model(api_key):
     preferred = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
     headers = {"x-goog-api-key": api_key, "Accept": "application/json"}
     try:
-        r = requests.get(f"{BASE_API}/models", headers=headers, timeout=15)
+        r = requests.get(f"{BASE_API}/models", headers=headers, params={"key": api_key}, timeout=15)
         if r.status_code == 200:
             models_data = r.json().get("models", [])
             supported = [
@@ -151,6 +151,9 @@ def discover_model(api_key):
             for pref in preferred:
                 if pref in supported:
                     return pref
+            for m in supported:
+                if m.startswith("gemini-") and "flash" in m:
+                    return m
             if supported:
                 return supported[0]
     except Exception as e:
@@ -174,7 +177,13 @@ def upload_video_to_gemini(video_path, api_key):
         "Content-Type": "application/json"
     }
     init_body = json.dumps({"file": {"display_name": display_name}})
-    init_resp = requests.post(UPLOAD_API, headers=init_headers, data=init_body, timeout=30)
+    init_resp = requests.post(
+        UPLOAD_API,
+        headers=init_headers,
+        params={"key": api_key},
+        data=init_body,
+        timeout=30
+    )
     init_resp.raise_for_status()
 
     upload_url = init_resp.headers.get("X-Goog-Upload-URL") or init_resp.headers.get("x-goog-upload-url")
@@ -191,7 +200,7 @@ def upload_video_to_gemini(video_path, api_key):
         "X-Goog-Upload-Offset": "0",
         "X-Goog-Upload-Command": "upload, finalize"
     }
-    upload_resp = requests.post(upload_url, headers=upload_headers, data=file_bytes, timeout=120)
+    upload_resp = requests.post(upload_url, headers=upload_headers, data=file_bytes, timeout=180)
     upload_resp.raise_for_status()
     file_info = upload_resp.json().get("file", {})
     remote_name = file_info.get("name")
@@ -199,10 +208,11 @@ def upload_video_to_gemini(video_path, api_key):
 
     # 3. Wait for processing to become ACTIVE
     start_time = time.time()
-    while time.time() - start_time < 90:
+    while time.time() - start_time < 120:
         poll_resp = requests.get(
             f"{BASE_API}/{remote_name}",
             headers={"x-goog-api-key": api_key},
+            params={"key": api_key},
             timeout=20
         )
         poll_resp.raise_for_status()
@@ -224,6 +234,7 @@ def delete_gemini_file(remote_name, api_key):
         requests.delete(
             f"{BASE_API}/{remote_name}",
             headers={"x-goog-api-key": api_key},
+            params={"key": api_key},
             timeout=15
         )
     except Exception:
@@ -274,8 +285,9 @@ Output MUST be raw valid JSON adhering strictly to this schema:
         resp = requests.post(
             gen_url,
             headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
+            params={"key": api_key},
             json=payload,
-            timeout=60
+            timeout=90
         )
         resp.raise_for_status()
         cand = resp.json().get("candidates", [{}])[0]
@@ -321,6 +333,7 @@ Output MUST be raw valid JSON adhering strictly to this schema:
         resp = requests.post(
             gen_url,
             headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
+            params={"key": api_key},
             json=payload,
             timeout=30
         )
