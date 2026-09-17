@@ -70,3 +70,25 @@ Exclusive highlights.
 [dry-run] Successfully generated and verified metadata for a9df4a20-a55b-4d3f-b2b4-f76835ef53f8.mp4 (1jM0bszXkpG20icy7QUvkxeWo6Ntv0JYG).
 
 [finish] Processed 1 video(s).
+
+===== RUN 2026-09-17T19:24:14.549584+00:00Z =====
+[start] max_uploads=1, dry_run=True
+[drive] Found 14 pending video(s) in Drive Inbox.
+
+-------- Processing: a9df4a20-a55b-4d3f-b2b4-f76835ef53f8.mp4 (ID: 1jM0bszXkpG20icy7QUvkxeWo6Ntv0JYG, Created: 2026-09-17T18:55:40.541Z) --------
+[drive] Downloading a9df4a20-a55b-4d3f-b2b4-f76835ef53f8.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: topic_default_fallback
+[meta] Title: Dubai luxury lifestyle Highlights
+[meta] Description:
+Experience the finest dubai luxury lifestyle.
+Follow for daily luxury updates.
+Exclusive highlights.
+
+#shorts #luxury #lifestyle
+[meta] Tags: ['shorts', 'viral']
+[meta] Hashtags: ['#shorts', '#luxury', '#lifestyle']
+[dry-run] Successfully generated and verified metadata for a9df4a20-a55b-4d3f-b2b4-f76835ef53f8.mp4 (1jM0bszXkpG20icy7QUvkxeWo6Ntv0JYG).
+
+[finish] Processed 1 video(s).
