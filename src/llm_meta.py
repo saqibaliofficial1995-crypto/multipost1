@@ -250,14 +250,18 @@ def delete_gemini_file(remote_name, api_key):
     if not remote_name:
         return
     try:
-        requests.delete(
+        r = requests.delete(
             f"{BASE_API}/{remote_name}",
             headers={"x-goog-api-key": api_key},
             params={"key": api_key},
             timeout=15
         )
-    except Exception:
-        pass
+        if r.status_code in (200, 204):
+            print(f"[llm_meta] Confirmed: Uploaded file {remote_name} deleted from Gemini Files API.")
+        else:
+            print(f"[llm_meta] Warning deleting {remote_name} (HTTP {r.status_code}): {r.text}")
+    except Exception as e:
+        print(f"[llm_meta] Error deleting {remote_name}: {e}")
 
 
 def generate_from_video(video_path, duration, channel_topic, api_key, model_name):
@@ -378,14 +382,42 @@ Output MUST be raw valid JSON adhering strictly to this schema:
 
 
 def fallback_metadata(duration=0, channel_topic="", default_desc="", default_tags=None):
-    """Safe fallback based on channel topic and configuration defaults."""
-    topic = channel_topic or "Luxury Lifestyle"
+    """Safe fallback based on channel topic and configuration defaults.
+    
+    Guarantees:
+    - title under 60 chars
+    - description with hook and 3 hashtags
+    - exactly 10 to 15 tags, total under 460 chars
+    """
+    topic = channel_topic or "Dubai luxury lifestyle"
     title = f"{topic} Highlights"[:59]
 
-    tags = list(default_tags) if default_tags else ["shorts", "viral", "luxury", "lifestyle"]
+    # Curate high-relevance tags for channel niche
+    base_tags = [
+        "luxury", "lifestyle", "dubai", "millionaire", "billionaire",
+        "supercars", "mansion", "wealth", "aesthetic", "vip", "exclusive", "rich"
+    ]
+    tags = list(default_tags) if default_tags else []
+    for t in base_tags:
+        if t not in tags:
+            tags.append(t)
     if duration <= 60 and "shorts" not in [t.lower() for t in tags]:
         tags.insert(0, "shorts")
+
+    # Pad to at least 10 tags if needed
+    padding = ["trending", "viral", "inspiration", "goals", "success"]
+    for p in padding:
+        if len(tags) >= 10:
+            break
+        if p not in tags:
+            tags.append(p)
+
+    # Slice to at most 15 tags
     tags = tags[:15]
+
+    # Enforce under 460 characters total
+    while tags and len(",".join(tags)) >= 460:
+        tags.pop()
 
     hashtags = ["#shorts", "#luxury", "#lifestyle"]
     desc = default_desc or f"Experience the finest {topic.lower()}.\nFollow for daily luxury updates.\nExclusive highlights."

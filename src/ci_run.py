@@ -221,10 +221,30 @@ def run(cfg, max_uploads=1, dry_run=False):
         tags = meta["tags"]
         hashtags = meta.get("hashtags", [])
 
-        log.write(f"[meta] Title: {title}")
+        log.write(f"[meta] Title ({len(title)} chars): {title}")
         log.write(f"[meta] Description:\n{desc}")
-        log.write(f"[meta] Tags: {tags}")
+        tags_str = ",".join(tags)
+        log.write(f"[meta] Tags ({len(tags)} items, {len(tags_str)} chars): {tags}")
         log.write(f"[meta] Hashtags: {hashtags}")
+
+        # Safety Check 1: Reject duplicate title if already exists in state/uploaded.json
+        existing_titles = {item.get("title", "").strip().lower() for item in state.get("items", {}).values() if item.get("title")}
+        existing_titles.update(item.get("title", "").strip().lower() for item in state.get("history", []) if item.get("title"))
+        if title.strip().lower() in existing_titles:
+            log.write(f"[reject] Safety block: Title '{title}' already exists in state/uploaded.json. Duplicate rejected.")
+            if not dry_run:
+                item_state["attempts"] = attempts + 1
+                item_state["last_error"] = f"Duplicate title rejected: {title}"
+                save_state(state_file, state)
+                continue
+
+        # Safety Check 2: Block publishing when path is topic_default_fallback
+        if not dry_run and path_used == "topic_default_fallback":
+            log.write("[block] Safety block: Publishing blocked because metadata path is topic_default_fallback.")
+            item_state["attempts"] = attempts + 1
+            item_state["last_error"] = "Publishing blocked: topic_default_fallback path used"
+            save_state(state_file, state)
+            continue
 
         if dry_run:
             log.write(f"[dry-run] Successfully generated and verified metadata for {file_name} ({file_id}).")
