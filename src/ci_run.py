@@ -216,6 +216,8 @@ def run(cfg, max_uploads=1, dry_run=False):
             path_used = meta.get("path_used", "topic_default_fallback")
 
         log.write(f"[meta] Path used: {path_used}")
+        if meta.get("model_used"):
+            log.write(f"[meta] Model used: {meta['model_used']}")
         title = meta["title"]
         desc = meta["description"]
         tags = meta["tags"]
@@ -238,11 +240,11 @@ def run(cfg, max_uploads=1, dry_run=False):
                 save_state(state_file, state)
                 continue
 
-        # Safety Check 2: Block publishing when path is topic_default_fallback
-        if not dry_run and path_used == "topic_default_fallback":
-            log.write("[block] Safety block: Publishing blocked because metadata path is topic_default_fallback.")
+        # Safety Check 2: Block live publishing unless path is video_ai_gemini (or manual sidecar_txt)
+        if not dry_run and path_used not in ("video_ai_gemini", "sidecar_txt"):
+            log.write(f"[block] Safety block: Publishing blocked because metadata path is '{path_used}'. Only 'video_ai_gemini' (or sidecar .txt) is allowed to publish live.")
             item_state["attempts"] = attempts + 1
-            item_state["last_error"] = "Publishing blocked: topic_default_fallback path used"
+            item_state["last_error"] = f"Publishing blocked: {path_used} not allowed for live publish"
             save_state(state_file, state)
             continue
 

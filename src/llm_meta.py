@@ -51,8 +51,8 @@ def clean_text(text):
     return text.strip()
 
 
-def validate_metadata(data, duration=0, channel_topic=""):
-    """Validates the AI output strictly against YouTube requirements."""
+def validate_metadata(data, duration=0, channel_topic="", is_text_only=False):
+    """Validates the AI output strictly against YouTube requirements and anti-hallucination rules."""
     if not isinstance(data, dict):
         return None
 
@@ -63,9 +63,44 @@ def validate_metadata(data, duration=0, channel_topic=""):
 
     # Title must be under 60 characters and non-empty
     if not title or len(title) >= 60:
+        print(f"[llm_meta] Validation reject: Title length invalid ({len(title)} chars): '{title}'")
         return None
 
-    # Description lines check (3 to 5 lines)
+    # ANTI-HALLUCINATION RULE 1: Reject any title containing currency symbols or codes
+    # ($, €, £, ¥, ₹, USD, AED, EUR, GBP, etc.)
+    if re.search(r"[\$\€\£\¥\₹]|\b(USD|AED|EUR|GBP)\b", title, re.IGNORECASE):
+        print(f"[llm_meta] Validation reject: Title contains currency symbol/code: '{title}'")
+        return None
+
+    # ANTI-HALLUCINATION RULE 2: Reject any title containing numbers that imply a price or factual claim
+    # e.g., 50M, 10M, 100k, 10,000 sqft, 5000 sq ft, 20M, etc.
+    if re.search(r"\b\d+([.,]\d+)?\s*(m|b|k|million|billion|sqft|sq\s*ft|feet)\b", title, re.IGNORECASE):
+        print(f"[llm_meta] Validation reject: Title contains price/metric claim: '{title}'")
+        return None
+
+    # ANTI-HALLUCINATION RULE 3: Reject large numbers (e.g. 50000, 100000) unless it's a current year
+    large_nums = re.findall(r"\b\d{4,}\b", title)
+    if large_nums and any(y not in ("2024", "2025", "2026", "2027") for y in large_nums):
+        print(f"[llm_meta] Validation reject: Title contains large factual number: '{title}'")
+        return None
+
+    # ANTI-HALLUCINATION RULE 4: Reject price claims in description
+    if re.search(r"[\$\€\£\¥\₹]|\b(USD|AED|EUR|GBP)\b|\b\d+([.,]\d+)?\s*(m|b|million|billion)\b", raw_desc, re.IGNORECASE):
+        print(f"[llm_meta] Validation reject: Description contains price/valuation claims")
+        return None
+
+    # RESTRICTED TEXT MODE: When the AI model has NOT seen the video
+    if is_text_only:
+        # Must not invent any specific numbers implying factual claims
+        if re.search(r"\b\d+\b", title):
+            print(f"[llm_meta] Validation reject (text_ai restricted): Title contains numbers implying factual claims: '{title}'")
+            return None
+        # Must not use 'tour', 'inside', 'walkthrough', or 'look inside' framing
+        if re.search(r"\b(tour|inside|walkthrough|look inside|step inside|peek inside)\b", title, re.IGNORECASE):
+            print(f"[llm_meta] Validation reject (text_ai restricted): Title contains forbidden framing: '{title}'")
+            return None
+
+    # Description lines check (2 to 5 lines)
     desc_lines = [clean_text(l) for l in raw_desc.splitlines() if l.strip()]
     if len(desc_lines) < 2:
         return None
@@ -135,15 +170,14 @@ def validate_metadata(data, duration=0, channel_topic=""):
     }
 
 
-def discover_model(api_key):
-    """Discovers available models for the given API key and selects the best free-tier model."""
+def discover_models(api_key):
+    """Discovers available models for the given API key and returns prioritized list."""
     preferred = [
         "gemini-flash-latest",
         "gemini-3.5-flash",
         "gemini-3.6-flash",
-        "gemini-3.7-flash",
-        "gemini-3.8-flash",
         "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
         "gemini-1.5-flash",
     ]
     headers = {"x-goog-api-key": api_key, "Accept": "application/json"}
@@ -151,26 +185,33 @@ def discover_model(api_key):
         r = requests.get(f"{BASE_API}/models", headers=headers, params={"key": api_key}, timeout=15)
         if r.status_code == 200:
             models_data = r.json().get("models", [])
-            # Filter out deprecated models like gemini-2.5-flash
             supported = [
                 m.get("name", "").replace("models/", "")
                 for m in models_data
-                if "generateContent" in m.get("supportedGenerationMethods", []) and "2.5-flash" not in m.get("name", "")
+                if "generateContent" in m.get("supportedGenerationMethods", [])
+                and "2.5-flash" not in m.get("name", "")
+                and "2.5-pro" not in m.get("name", "")
             ]
             print(f"[llm_meta] Supported active models: {supported}")
-            for pref in preferred:
-                if pref in supported:
-                    return pref
+            ordered = [p for p in preferred if p in supported]
             for s in supported:
-                if "flash" in s:
-                    return s
-            if supported:
-                return supported[0]
+                if s not in ordered and "flash" in s:
+                    ordered.append(s)
+            for s in supported:
+                if s not in ordered:
+                    ordered.append(s)
+            if ordered:
+                return ordered
         else:
             print(f"[llm_meta] Models list failed (HTTP {r.status_code}): {r.text}")
     except Exception as e:
         print(f"[llm_meta] Model discovery warning: {e}")
-    return "gemini-3.6-flash"
+    return ["gemini-flash-latest", "gemini-3.5-flash", "gemini-3.6-flash"]
+
+
+def discover_model(api_key):
+    """Returns the primary discovered model."""
+    return discover_models(api_key)[0]
 
 
 def upload_video_to_gemini(video_path, api_key):
@@ -264,8 +305,13 @@ def delete_gemini_file(remote_name, api_key):
         print(f"[llm_meta] Error deleting {remote_name}: {e}")
 
 
-def generate_from_video(video_path, duration, channel_topic, api_key, model_name):
-    """Analyzes the video using Gemini multimodal input."""
+def generate_from_video(video_path, duration, channel_topic, api_key, candidate_models):
+    """Analyzes the video using Gemini multimodal input with exponential backoff and model switching."""
+    if isinstance(candidate_models, str):
+        candidate_models = [candidate_models]
+    if not candidate_models:
+        candidate_models = ["gemini-flash-latest", "gemini-3.5-flash", "gemini-3.6-flash"]
+
     remote_name = None
     try:
         print(f"[llm_meta] Uploading video to Gemini Files API ({os.path.basename(video_path)})...")
@@ -277,13 +323,17 @@ Analyze this video carefully.
 Channel topic / niche: '{channel_topic}'.
 Video duration: {duration} seconds.
 
-Inspect the visual scenes, subjects, aesthetic, luxury elements, actions, and narrative in the video.
-Based on what ACTUALLY occurs in the video (ignore generic UUID filenames), generate optimized metadata for high click-through rate.
+CRITICAL TRUTHFULNESS & ANTI-HALLUCINATION RULES:
+- Describe ONLY what is ACTUALLY and DIRECTLY visible in the video scenes.
+- NEVER estimate, invent, or guess a price, valuation, or cost (NEVER use '$', 'million', 'billion', 'AED', or price figures like '$50M').
+- NEVER invent square footage, acreage, or architectural specs not visibly shown on screen.
+- NEVER claim specific brand names or unverified private locations unless clearly readable on screen.
+- Ground the title, description, and tags entirely in the genuine visual content (architecture, interior design style, materials, lighting, ambiance, observable actions).
 
 Output MUST be raw valid JSON adhering strictly to this schema:
 {{
-  "title": "Engaging, high-CTR title UNDER 60 characters with the primary keyword near the beginning based on the video scenes. No clickbait padding and no ALL CAPS.",
-  "description": "3 to 5 lines total. The first 2 lines must carry a compelling hook visible before 'more'. Followed by natural sentences describing the video with high-ranking keywords.",
+  "title": "Engaging, authentic title UNDER 60 characters with the primary keyword near the beginning describing the visible scene. No clickbait padding, no currency/price claims, and no ALL CAPS.",
+  "description": "3 to 5 lines total. The first 2 lines must carry a compelling hook visible before 'more' describing the authentic visuals. Followed by natural sentences with high-ranking keywords.",
   "tags": ["10 to 15 tag keywords mixing broad and specific, total under 450 characters"],
   "hashtags": ["Three relevant hashtags without '#', exactly 3 items"]
 }}
@@ -299,31 +349,78 @@ Output MUST be raw valid JSON adhering strictly to this schema:
                 }
             ],
             "generationConfig": {
-                "temperature": 0.3,
+                "temperature": 0.2,
                 "responseMimeType": "application/json"
             }
         }
 
-        gen_url = f"{BASE_API}/models/{model_name}:generateContent"
-        resp = requests.post(
-            gen_url,
-            headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
-            params={"key": api_key},
-            json=payload,
-            timeout=90
-        )
-        if resp.status_code != 200:
-            print(f"[llm_meta] Video generateContent error (HTTP {resp.status_code}): {resp.text}")
-            resp.raise_for_status()
+        max_attempts = 4
+        backoff_delays = [2, 4, 8, 16]
+        model_idx = 0
+        consecutive_503 = 0
 
-        cand = resp.json().get("candidates", [{}])[0]
-        text_content = cand.get("content", {}).get("parts", [{}])[0].get("text", "")
+        for attempt in range(1, max_attempts + 1):
+            current_model = candidate_models[model_idx % len(candidate_models)]
+            gen_url = f"{BASE_API}/models/{current_model}:generateContent"
+            print(f"[llm_meta] Video analysis attempt {attempt}/{max_attempts} using model '{current_model}'...")
 
-        parsed = json.loads(text_content)
-        validated = validate_metadata(parsed, duration=duration, channel_topic=channel_topic)
-        if validated:
-            validated["path_used"] = "video_ai_gemini"
-            return validated
+            status_code = None
+            resp_text = ""
+            try:
+                resp = requests.post(
+                    gen_url,
+                    headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
+                    params={"key": api_key},
+                    json=payload,
+                    timeout=90
+                )
+                status_code = resp.status_code
+                resp_text = resp.text
+            except Exception as req_err:
+                print(f"[llm_meta] Attempt {attempt}/{max_attempts} network exception: {req_err}")
+                status_code = 0
+                resp_text = str(req_err)
+
+            print(f"[llm_meta] Attempt {attempt}/{max_attempts} status: HTTP {status_code}")
+
+            if status_code == 200:
+                try:
+                    cand = resp.json().get("candidates", [{}])[0]
+                    text_content = cand.get("content", {}).get("parts", [{}])[0].get("text", "")
+                    parsed = json.loads(text_content)
+                    validated = validate_metadata(parsed, duration=duration, channel_topic=channel_topic, is_text_only=False)
+                    if validated:
+                        validated["path_used"] = "video_ai_gemini"
+                        validated["model_used"] = current_model
+                        print(f"[llm_meta] Video analysis succeeded on attempt {attempt} using '{current_model}'.")
+                        return validated
+                    else:
+                        print(f"[llm_meta] Attempt {attempt} output failed validation: {text_content[:200]}")
+                except Exception as parse_err:
+                    print(f"[llm_meta] Attempt {attempt} response parse error: {parse_err}")
+
+            if status_code == 503:
+                consecutive_503 += 1
+                print(f"[llm_meta] Attempt {attempt}/{max_attempts} returned 503 Service Unavailable ({consecutive_503} in a row).")
+                if consecutive_503 >= 1 and len(candidate_models) > 1:
+                    model_idx += 1
+                    next_model = candidate_models[model_idx % len(candidate_models)]
+                    print(f"[llm_meta] Switching to next available model from live list: '{next_model}'")
+            elif status_code in (429, 500, 502, 504):
+                print(f"[llm_meta] Attempt {attempt}/{max_attempts} transient status {status_code}: {resp_text[:200]}")
+                if len(candidate_models) > 1:
+                    model_idx += 1
+            else:
+                print(f"[llm_meta] Attempt {attempt}/{max_attempts} error (HTTP {status_code}): {resp_text[:200]}")
+                if len(candidate_models) > 1:
+                    model_idx += 1
+
+            if attempt < max_attempts:
+                sleep_sec = backoff_delays[attempt - 1]
+                next_model = candidate_models[model_idx % len(candidate_models)]
+                print(f"[llm_meta] Waiting {sleep_sec}s exponential backoff before retry {attempt + 1} (model: '{next_model}')...")
+                time.sleep(sleep_sec)
+
     finally:
         if remote_name:
             print(f"[llm_meta] Cleaning up Gemini file {remote_name}...")
@@ -333,16 +430,24 @@ Output MUST be raw valid JSON adhering strictly to this schema:
 
 
 def generate_from_text(duration, channel_topic, api_key, model_name, filename=""):
-    """Text-only Gemini fallback using channel topic and video duration."""
+    """Text-only Gemini fallback (RESTRICTED MODE: model has NOT seen video)."""
     prompt = f"""You are an elite YouTube SEO metadata specialist.
-Generate optimized video metadata for a YouTube video.
-Channel topic / niche: '{channel_topic}'.
+Generate metadata for a video in this channel topic / niche: '{channel_topic}'.
 Video duration: {duration} seconds.
+
+CRITICAL RESTRICTION (YOU HAVE NOT SEEN THE VIDEO):
+- You MUST NOT invent any specific factual claims, events, objects, or figures.
+- NO prices, valuations, or monetary figures (absolutely NO $, USD, AED, M, K, etc.).
+- NO square footage, dimensions, or acreage.
+- NO brand names or private property names.
+- NO locations beyond the general niche '{channel_topic}'.
+- NO 'tour', 'inside', 'walkthrough', or 'look inside' framing.
+- Focus purely on broad atmospheric lifestyle, design inspiration, and aesthetic concepts.
 
 Output MUST be raw valid JSON adhering strictly to this schema:
 {{
-  "title": "Engaging, high-CTR title UNDER 60 characters with the primary keyword near the beginning for this niche. No clickbait padding and no ALL CAPS.",
-  "description": "3 to 5 lines total. The first 2 lines must carry a compelling hook visible before 'more'. Followed by natural sentences with high-ranking keywords.",
+  "title": "Aesthetic, atmospheric title UNDER 60 characters for this niche. NO factual claims, NO prices, NO currency symbols, NO tour/inside framing, and NO ALL CAPS.",
+  "description": "3 to 5 lines total. Compelling hook in the first 2 lines focused on design/lifestyle inspiration. Followed by natural sentences with relevant niche keywords.",
   "tags": ["10 to 15 tag keywords mixing broad and specific, total under 450 characters"],
   "hashtags": ["Three relevant hashtags without '#', exactly 3 items"]
 }}
@@ -350,7 +455,7 @@ Output MUST be raw valid JSON adhering strictly to this schema:
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
-            "temperature": 0.4,
+            "temperature": 0.3,
             "responseMimeType": "application/json"
         }
     }
@@ -371,9 +476,10 @@ Output MUST be raw valid JSON adhering strictly to this schema:
         text_content = cand.get("content", {}).get("parts", [{}])[0].get("text", "")
 
         parsed = json.loads(text_content)
-        validated = validate_metadata(parsed, duration=duration, channel_topic=channel_topic)
+        validated = validate_metadata(parsed, duration=duration, channel_topic=channel_topic, is_text_only=True)
         if validated:
             validated["path_used"] = "text_ai_gemini"
+            validated["model_used"] = model_name
             return validated
     except Exception as e:
         print(f"[llm_meta] Text-only Gemini call error: {e}")
@@ -435,22 +541,23 @@ def fallback_metadata(duration=0, channel_topic="", default_desc="", default_tag
 def generate_metadata(video_path=None, filename="", duration=0, channel_topic="", api_key=None, default_desc="", default_tags=None):
     """Main entry point: Generates metadata with multi-tier fallback.
 
-    Tier 1: Multimodal video analysis via Gemini Files API (video_ai_gemini).
-    Tier 2: Text-only Gemini call using channel topic and duration (text_ai_gemini).
+    Tier 1: Multimodal video analysis via Gemini Files API with exponential backoff & model switching (video_ai_gemini).
+    Tier 2: Text-only Gemini call with strict anti-hallucination restrictions (text_ai_gemini).
     Tier 3: Channel topic and config defaults (topic_default_fallback).
     """
     key = api_key or os.environ.get("GEMINI_API_KEY")
 
     if key:
-        chosen_model = discover_model(key)
-        print(f"[llm_meta] Using Gemini model: {chosen_model}")
+        candidate_models = discover_models(key)
+        chosen_model = candidate_models[0]
+        print(f"[llm_meta] Candidate models from live list: {candidate_models} (primary: {chosen_model})")
 
         # Tier 1: Multimodal video analysis
         if video_path and os.path.exists(video_path):
             try:
-                res = generate_from_video(video_path, duration, channel_topic, key, chosen_model)
+                res = generate_from_video(video_path, duration, channel_topic, key, candidate_models)
                 if res:
-                    print(f"[llm_meta] Generated metadata via Tier 1 ({res['path_used']}).")
+                    print(f"[llm_meta] Generated metadata via Tier 1 ({res['path_used']}) using '{res.get('model_used', chosen_model)}'.")
                     return res
             except Exception as e:
                 print(f"[llm_meta] Tier 1 video analysis failed ({e}). Falling back to Tier 2.")
