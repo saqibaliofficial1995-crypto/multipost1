@@ -8,3 +8,21 @@
 [start] max_uploads=1, dry_run=True
 [drive] Found 0 pending video(s) in Drive Inbox.
 [finish] Nothing to upload. Inbox is clear.
+
+===== RUN 2026-09-17T18:31:13.768138+00:00Z =====
+[start] max_uploads=1, dry_run=False
+[drive] Found 1 pending video(s) in Drive Inbox.
+
+-------- Processing: Multipost_Test_Clip_#shorts_#viral.mp4 (ID: 19VDqiN79Eb1Z2u33mt-Xd71oRJ_Dc6OV, Created: 2026-09-17T18:30:28.157Z) --------
+[drive] Downloading Multipost_Test_Clip_#shorts_#viral.mp4...
+[meta] Title: Multipost Test Clip #shorts #viral
+[meta] Tags: ['shorts', 'viral']
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[yt] Uploading to YouTube...
+[yt] Published successfully: https://www.youtube.com/watch?v=xJfx0UbyF4g
+[ig] SKIPPED: META_PAGE_TOKEN and/or IG_USER_ID are unset.
+[drive] Moved Multipost_Test_Clip_#shorts_#viral.mp4 to 'Uploaded' subfolder.
+[state] Recorded 19VDqiN79Eb1Z2u33mt-Xd71oRJ_Dc6OV in state/uploaded.json
+
+[finish] Processed 1 video(s).

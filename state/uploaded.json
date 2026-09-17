@@ -1,3 +1,26 @@
 {
-  "items": {}
+  "history": [
+    {
+      "drive_file_id": "19VDqiN79Eb1Z2u33mt-Xd71oRJ_Dc6OV",
+      "filename": "Multipost_Test_Clip_#shorts_#viral.mp4",
+      "instagram_id": null,
+      "instagram_permalink": "",
+      "title": "Multipost Test Clip #shorts #viral",
+      "uploaded_at_utc": "2026-09-17T18:31:20.624335+00:00Z",
+      "youtube_url": "https://www.youtube.com/watch?v=xJfx0UbyF4g",
+      "youtube_video_id": "xJfx0UbyF4g"
+    }
+  ],
+  "items": {
+    "19VDqiN79Eb1Z2u33mt-Xd71oRJ_Dc6OV": {
+      "drive_file_id": "19VDqiN79Eb1Z2u33mt-Xd71oRJ_Dc6OV",
+      "filename": "Multipost_Test_Clip_#shorts_#viral.mp4",
+      "instagram_id": null,
+      "instagram_permalink": "",
+      "title": "Multipost Test Clip #shorts #viral",
+      "uploaded_at_utc": "2026-09-17T18:31:20.624335+00:00Z",
+      "youtube_url": "https://www.youtube.com/watch?v=xJfx0UbyF4g",
+      "youtube_video_id": "xJfx0UbyF4g"
+    }
+  }
 }
