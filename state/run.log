@@ -158,3 +158,27 @@ Exclusive highlights.
 [dry-run] Successfully generated and verified metadata for a9df4a20-a55b-4d3f-b2b4-f76835ef53f8.mp4 (1jM0bszXkpG20icy7QUvkxeWo6Ntv0JYG).
 
 [finish] Processed 1 video(s).
+
+===== RUN 2026-09-17T20:05:59.173676+00:00Z =====
+[start] max_uploads=1, dry_run=True
+[drive] Found 14 pending video(s) in Drive Inbox.
+
+-------- Processing: a9df4a20-a55b-4d3f-b2b4-f76835ef53f8.mp4 (ID: 1jM0bszXkpG20icy7QUvkxeWo6Ntv0JYG, Created: 2026-09-17T18:55:40.541Z) --------
+[drive] Downloading a9df4a20-a55b-4d3f-b2b4-f76835ef53f8.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: text_ai_gemini
+[meta] Title (46 chars): Inside Dubai Luxury Lifestyle: $50M Villa Tour
+[meta] Description:
+Experience the peak of Dubai luxury lifestyle inside this breathtaking $50M mega mansion.
+From private infinity pools to rare supercar garages, step into ultimate opulence.
+Explore prime real estate, high fashion, and fine dining defined by elite living in the UAE.
+Subscribe for daily tours of the most expensive homes and lifestyle spots in Dubai.
+Discover what makes living in Dubai the ultimate global symbol of wealth and success.
+
+#DubaiLuxury #LuxuryLifestyle #DubaiRealEstate
+[meta] Tags (13 items, 248 chars): ['shorts', 'Dubai luxury lifestyle', 'Dubai mega mansion', 'Dubai luxury real estate', 'luxury living Dubai', 'Dubai billionaire lifestyle', 'supercars Dubai', 'Dubai penthouse', 'UAE luxury', 'Dubai rich lifestyle', 'most expensive house in Dubai', 'Dubai luxury tour', 'Dubai mansions']
+[meta] Hashtags: ['#DubaiLuxury', '#LuxuryLifestyle', '#DubaiRealEstate']
+[dry-run] Successfully generated and verified metadata for a9df4a20-a55b-4d3f-b2b4-f76835ef53f8.mp4 (1jM0bszXkpG20icy7QUvkxeWo6Ntv0JYG).
+
+[finish] Processed 1 video(s).
