@@ -27,7 +27,6 @@ STATE_FILE = Path(".setup_state.json")
 TOKENS_DIR = Path("tokens")
 CLIENT_SECRET_FILE = TOKENS_DIR / "google_client_secret.json"
 YT_TOKEN_FILE = TOKENS_DIR / "yt_token.json"
-META_TOKEN_FILE = TOKENS_DIR / "fb_page_token.json"
 CONFIG_FILE = Path("config.yaml")
 CONFIG_EXAMPLE_FILE = Path("config.example.yaml")
 
@@ -364,7 +363,7 @@ def step_3_youtube_auth(state):
 
 
 # =====================================================================
-# STEP 4: Meta Graph API Setup (Facebook & Instagram)
+# STEP 4: Instagram API with Instagram Login Setup
 # =====================================================================
 def _pipe_gh_secret(name, val, repo=None):
     cmd = ["gh", "secret", "set", name]
@@ -374,131 +373,96 @@ def _pipe_gh_secret(name, val, repo=None):
     return proc.returncode == 0
 
 
-def step_4_meta_setup(state):
-    step_header(4, "Meta Graph API (Facebook Page & Instagram)", state.is_completed(4))
+def step_4_instagram_setup(state):
+    step_header(4, "Instagram API with Instagram Login", state.is_completed(4))
     if should_skip_step(state, 4):
         return
 
     import requests
 
-    GRAPH = "https://graph.facebook.com/v21.0"
+    GRAPH_IG = "https://graph.instagram.com"
 
-    print("Configure Facebook Page and linked Instagram Business/Creator account.")
+    print("Configure Instagram Business/Creator account via Instagram API with Instagram Login.")
+    print("No Facebook Page is required.")
     print("Tokens are piped directly to GitHub Secrets via stdin (never echoed, never written to disk).\n")
 
-    user_token = getpass.getpass("Enter Meta User Token (hidden): ").strip()
+    user_token = getpass.getpass("Enter Instagram User Token (hidden): ").strip()
     if not user_token:
-        print("[FAIL] Meta User Token cannot be empty.")
+        print("[FAIL] Instagram User Token cannot be empty.")
         sys.exit(1)
 
-    app_id = input("Enter Meta App ID (or press Enter if using pre-exchanged long-lived token): ").strip()
-    if app_id:
-        app_secret = getpass.getpass("Enter Meta App Secret (hidden): ").strip()
-        if app_secret:
-            print("\n[1/2] Exchanging user token for long-lived token (60 days)...")
-            try:
-                resp = requests.get(
-                    f"{GRAPH}/oauth/access_token",
-                    params={
-                        "grant_type": "fb_exchange_token",
-                        "client_id": app_id,
-                        "client_secret": app_secret,
-                        "fb_exchange_token": user_token,
-                    },
-                    timeout=30,
-                )
-                data = resp.json()
-                if "error" in data:
-                    err = data["error"]
-                    print(f"\n[FAIL-FAST ERROR] Token exchange failed: {err.get('message')}")
-                    sys.exit(1)
-                user_token = data["access_token"]
-                print("  - Long-lived user token obtained: True")
-            except Exception as e:
-                print(f"[FAIL-FAST ERROR] HTTP error during token exchange: {e}")
+    app_secret = getpass.getpass("Enter Instagram App Secret (hidden, or press Enter if token is already long-lived): ").strip()
+    if app_secret:
+        print("\n[1/2] Exchanging user token for long-lived token (60 days)...")
+        try:
+            resp = requests.get(
+                f"{GRAPH_IG}/access_token",
+                params={
+                    "grant_type": "ig_exchange_token",
+                    "client_secret": app_secret,
+                    "access_token": user_token,
+                },
+                timeout=30,
+            )
+            data = resp.json()
+            if "error" in data:
+                err = data["error"]
+                print(f"\n[FAIL-FAST ERROR] Token exchange failed: {err.get('message')}")
                 sys.exit(1)
+            user_token = data["access_token"]
+            expires_in = data.get("expires_in", 5184000)
+            days = round(expires_in / 86400, 1)
+            print(f"  - Long-lived Instagram token obtained: True (valid for {days} days)")
+        except Exception as e:
+            print(f"[FAIL-FAST ERROR] HTTP error during token exchange: {e}")
+            sys.exit(1)
 
-    # 2. Fetch Pages and linked Instagram accounts
-    print("[2/2] Fetching Facebook Pages and linked Instagram accounts...")
+    # 2. Fetch Instagram Account info directly from graph.instagram.com/me
+    print("[2/2] Fetching Instagram account details...")
     try:
-        p_resp = requests.get(
-            f"{GRAPH}/me/accounts",
+        me_resp = requests.get(
+            f"{GRAPH_IG}/me",
             params={
-                "fields": "id,name,access_token,instagram_business_account{id,username}",
+                "fields": "id,username",
                 "access_token": user_token,
             },
             timeout=30,
         )
-        p_data = p_resp.json()
-        if "error" in p_data:
-            print(f"[FAIL] Meta API error: {p_data['error'].get('message')}")
+        me_data = me_resp.json()
+        if "error" in me_data:
+            err = me_data["error"]
+            print(f"[FAIL] Instagram API error ({err.get('code')}): {err.get('message')}")
             sys.exit(1)
-        p_resp.raise_for_status()
-        pages = p_data.get("data", [])
-        if not pages:
-            print("[FAIL] No Facebook Pages found for this account! Check your permissions.")
-            sys.exit(1)
+        me_resp.raise_for_status()
     except Exception as e:
-        print(f"[FAIL] Error retrieving Facebook Pages: {e}")
+        print(f"[FAIL] Error retrieving Instagram profile: {e}")
         sys.exit(1)
 
-    # Filter pages with linked Instagram account
-    pages_with_ig = [
-        (i, pg)
-        for i, pg in enumerate(pages)
-        if pg.get("instagram_business_account") and pg["instagram_business_account"].get("id")
-    ]
+    ig_id = str(me_data.get("id"))
+    ig_username = me_data.get("username", "unknown")
 
-    if not pages_with_ig:
-        print("\n[FAIL] Found Facebook Page(s), but none have a linked Instagram Business/Creator account!")
-        for pg in pages:
-            print(f"  - Page: '{pg.get('name')}' (ID: {pg.get('id')}) -> No linked Instagram")
-        print("Please link your Instagram Professional/Creator account to your Page and re-run.")
-        sys.exit(1)
-
-    selected_idx = pages_with_ig[0][0]
-    if len(pages_with_ig) > 1:
-        print(f"\nFound {len(pages_with_ig)} Page(s) with linked Instagram:")
-        for idx, (orig_idx, pg) in enumerate(pages_with_ig):
-            ig = pg["instagram_business_account"]
-            print(f"  [{idx + 1}] {pg['name']} | Instagram: @{ig.get('username')}")
-        choice = input(f"Select Page [1-{len(pages_with_ig)}] (default 1): ").strip()
-        try:
-            c = int(choice) - 1
-            if 0 <= c < len(pages_with_ig):
-                selected_idx = pages_with_ig[c][0]
-        except ValueError:
-            pass
-
-    selected_page = pages[selected_idx]
-    ig_acc = selected_page["instagram_business_account"]
-    page_name = selected_page["name"]
-    page_token = selected_page["access_token"]
-    ig_id = str(ig_acc["id"])
-    ig_username = ig_acc.get("username", "unknown")
-
-    # Print ONLY Page name and IG username for user confirmation
+    # Print ONLY Instagram username and user ID for confirmation (NEVER a Page name, NEVER a token)
     print("\n" + "-" * 50)
-    print(" CONFIRM META CREDENTIALS TO DEPLOY:")
-    print(f"  Page Name:          {page_name}")
+    print(" CONFIRM INSTAGRAM CREDENTIALS TO DEPLOY:")
     print(f"  Instagram Username: @{ig_username}")
+    print(f"  Instagram User ID:  {ig_id}")
     print("-" * 50)
 
     repo_name = state.get_val("repo_name") or os.environ.get("GITHUB_REPOSITORY") or "bjviufutu-dot/multipost"
-    print(f"Deploying META_PAGE_TOKEN and IG_USER_ID straight to GitHub Secrets ({repo_name})...")
+    print(f"Deploying IG_ACCESS_TOKEN and IG_USER_ID straight to GitHub Secrets ({repo_name})...")
 
-    s1 = _pipe_gh_secret("META_PAGE_TOKEN", page_token, repo=repo_name)
+    s1 = _pipe_gh_secret("IG_ACCESS_TOKEN", user_token, repo=repo_name)
     s2 = _pipe_gh_secret("IG_USER_ID", ig_id, repo=repo_name)
 
     if s1 and s2:
-        print("  - META_PAGE_TOKEN set in GitHub Secrets: True")
+        print("  - IG_ACCESS_TOKEN set in GitHub Secrets: True")
         print("  - IG_USER_ID set in GitHub Secrets: True")
-        state.set_val("page_name", page_name)
         state.set_val("ig_username", ig_username)
+        state.set_val("ig_user_id", ig_id)
         state.mark_completed(4)
-        print("\n[SUCCESS] Meta credentials deployed to GitHub Secrets via secure stdin.\n")
+        print("\n[SUCCESS] Instagram credentials deployed to GitHub Secrets via secure stdin.\n")
     else:
-        print(f"[FAIL] Failed setting secrets (META_PAGE_TOKEN: {s1}, IG_USER_ID: {s2}).")
+        print(f"[FAIL] Failed setting secrets (IG_ACCESS_TOKEN: {s1}, IG_USER_ID: {s2}).")
         sys.exit(1)
 
 
@@ -582,11 +546,8 @@ def step_6_local_config(state):
         sys.exit(1)
 
     # Populate IDs from Step 4
-    page_id = state.get_val("page_id")
     ig_user_id = state.get_val("ig_user_id")
 
-    if page_id:
-        cfg.setdefault("facebook", {})["page_id"] = str(page_id)
     if ig_user_id:
         cfg.setdefault("instagram", {})["ig_user_id"] = str(ig_user_id)
 
@@ -594,7 +555,7 @@ def step_6_local_config(state):
         yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
 
     state.mark_completed(6)
-    print(f"\n[SUCCESS] Local {CONFIG_FILE} configured with Facebook Page ID and Instagram User ID.\n")
+    print(f"\n[SUCCESS] Local {CONFIG_FILE} configured with Instagram User ID.\n")
 
 
 # =====================================================================
@@ -706,18 +667,7 @@ def step_8_github_secrets(state):
             secrets_to_set["YT_CLIENT_SECRET"] = yt_client_secret
             secrets_to_set["YT_REFRESH_TOKEN"] = yt_refresh_token
 
-    # 2. Meta Secrets
-    if META_TOKEN_FILE.exists():
-        with open(META_TOKEN_FILE, "r", encoding="utf-8") as f:
-            m_data = json.load(f)
-        if m_data.get("page_access_token"):
-            secrets_to_set["META_PAGE_TOKEN"] = m_data["page_access_token"]
-        if m_data.get("page_id"):
-            secrets_to_set["FB_PAGE_ID"] = str(m_data["page_id"])
-        if m_data.get("ig_user_id"):
-            secrets_to_set["IG_USER_ID"] = str(m_data["ig_user_id"])
-
-    # 3. Storage Secrets (if configured)
+    # 2. Storage Secrets (if configured)
     if state.get_val("s3_configured"):
         s3_ep = state.get_val("s3_endpoint")
         s3_bk = state.get_val("s3_bucket")
@@ -786,14 +736,14 @@ def main():
         sys.exit(0 if ok else 1)
 
     banner("MULTIPOST INTERACTIVE SETUP WIZARD")
-    print("This wizard will configure YouTube, Facebook, Instagram, Storage, and GitHub Secrets.")
+    print("This wizard will configure YouTube, Instagram, Storage, and GitHub Secrets.")
     print("Progress is saved in .setup_state.json and can be resumed at any time.\n")
 
     steps = [
         (1, lambda: None if should_skip_step(state, 1) else step_1_preflight(exit_on_fail=True)),
         (2, lambda: step_2_check_google_secrets(state)),
         (3, lambda: step_3_youtube_auth(state)),
-        (4, lambda: step_4_meta_setup(state)),
+        (4, lambda: step_4_instagram_setup(state)),
         (5, lambda: step_5_s3_storage(state)),
         (6, lambda: step_6_local_config(state)),
         (7, lambda: step_7_github_repo_check(state)),

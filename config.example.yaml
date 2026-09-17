@@ -11,7 +11,6 @@ paths:
 
 platforms:
   youtube: true
-  facebook: true
   instagram: true
 
 youtube:
@@ -22,15 +21,9 @@ youtube:
   category_id: "22"            # 22 = People & Blogs, 24 = Entertainment
   default_tags: ["shorts", "viral", "ai"]
 
-facebook:
-  page_id: "YOUR_FB_PAGE_ID"
-  # Page access token (long-lived). Ise scripts/get_meta_tokens.py se banao.
-  page_access_token_file: "./tokens/fb_page_token.json"
-  publish_as_reel: true
-
 instagram:
-  ig_user_id: "YOUR_IG_BUSINESS_USER_ID"
-  page_access_token_file: "./tokens/fb_page_token.json"   # same token as FB page
+  ig_user_id: "YOUR_IG_USER_ID"
+  # Instagram API with Instagram Login: IG_ACCESS_TOKEN set via setup_wizard.py Step 4
   # IG Graph API ko PUBLIC https URL chahiye hoti hai (local file accept nahi karta).
   # Options: "local_server" (ngrok/cloudflared ke saath) ya "external"
   hosting:

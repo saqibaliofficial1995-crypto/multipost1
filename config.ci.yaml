@@ -6,7 +6,6 @@ drive:
   inbox_folder_id: 1_UgiT31n0xkdUOnPiFY0xf6fty7mEEXH
 platforms:
   youtube: true
-  facebook: true
   instagram: true
 youtube:
   privacy_status: public
@@ -15,8 +14,6 @@ youtube:
   default_tags:
   - shorts
   - viral
-facebook:
-  publish_as_reel: true
 instagram:
   upload_prefix: multipost/vertical
 encode:

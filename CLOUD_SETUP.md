@@ -66,9 +66,8 @@ Phir: **Settings → Secrets and variables → Actions → New repository secret
 | `YT_CLIENT_ID` | Step 1 se | YouTube ke liye |
 | `YT_CLIENT_SECRET` | Step 1 se | YouTube ke liye |
 | `YT_REFRESH_TOKEN` | Step 1 se | YouTube ke liye |
-| `META_PAGE_TOKEN` | Step 2 ka page_access_token | FB + IG |
-| `FB_PAGE_ID` | Step 2 se | Facebook |
-| `IG_USER_ID` | Step 2 se | Instagram |
+| `IG_ACCESS_TOKEN` | Long-lived Instagram token (graph.instagram.com) | Instagram |
+| `IG_USER_ID` | Instagram User ID | Instagram |
 | `S3_ENDPOINT` | `https://<acct>.r2.cloudflarestorage.com` | Instagram |
 | `S3_BUCKET` | bucket name | Instagram |
 | `S3_ACCESS_KEY` | R2 API token | Instagram |

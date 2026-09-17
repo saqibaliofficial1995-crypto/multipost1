@@ -64,8 +64,7 @@ jobs:
           DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           # ---- Instagram & Media Host ----
-          META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
-          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           MEDIA_REPO: "multipost-media"
           MEDIA_REPO_OWNER: ${{ github.repository_owner }}

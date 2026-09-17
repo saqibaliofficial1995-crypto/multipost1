@@ -2,7 +2,7 @@
 
 Ek video `inbox/` me daalo. Script usko vertical 9:16 me convert karta hai,
 phir teeno platform par auto-publish karta hai — daily, set time par.
-Session ek baar login, uske baad hamesha chalta hai (refresh token + page token).
+Session ek baar setup, uske baad auto-refresh hota hai (refresh token + Instagram long-lived token).
 
 ---
 
@@ -41,28 +41,11 @@ ffmpeg + ffprobe system me install hona chahiye (`ffmpeg -version` se check karo
 ## 3. Facebook + Instagram setup (15 min)
 
 **Pehle ye zaroori hai:**
-- Instagram account **Business ya Creator** ho (Settings → Account type)
-- Wo IG account ek **Facebook Page** se linked ho
+- Instagram account Professional (Business ya Creator) hona chahiye
+- Setup Instagram API with Instagram Login (graph.instagram.com)
 - Personal IG account par API upload kaam nahi karta
 
-Phir:
-1. developers.facebook.com → Create App → type "Business"
-2. Products add karo: **Facebook Login** + **Instagram Graph API**
-3. Graph API Explorer kholo, apni app select karo, ye permissions maango:
-   `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`,
-   `instagram_basic`, `instagram_content_publish`, `business_management`
-4. Generate Access Token → short token copy karo
-5. Chalao:
-   ```bash
-   python scripts/get_meta_tokens.py \
-     --app-id YOUR_APP_ID \
-     --app-secret YOUR_APP_SECRET \
-     --short-token PASTE_SHORT_TOKEN \
-     --out tokens/fb_page_token.json
-   ```
-   Ye aapko `page_id` aur `ig_user_id` print karega, aur ek **never-expiring
-   Page token** save karega.
-6. `config.yaml` me `facebook.page_id` aur `instagram.ig_user_id` bhar do.
+Run `python setup_wizard.py` to configure credentials automatically.
 
 ---
 
@@ -133,9 +116,7 @@ multipost/
 │   ├── normalize.py            # ffmpeg 9:16 Shorts/Reels-safe encode
 │   ├── auth_google.py          # never-expiring YouTube session
 │   ├── upload_youtube.py
-│   ├── upload_facebook.py
 │   └── upload_instagram.py
-└── scripts/get_meta_tokens.py  # FB/IG token helper
 ```
 
 Ek video ke saath optional 2 files rakh sakte ho:
@@ -176,7 +157,7 @@ ki upload browser se hua ya API se. Views metadata + content par depend karte ha
 |---|---|
 | "session expired" baar baar | Google app Testing mode me hai → Publish karo |
 | Refresh token nahi mila | Google account → 3rd party access → app remove → dobara login |
-| `(#200) Permissions error` (FB) | `pages_manage_posts` permission missing |
-| IG `media_type REELS` error | account Business/Creator nahi hai, ya Page se linked nahi |
+| `(#200) Permissions error` (IG) | `instagram_business_content_publish` permission missing |
+| IG `media_type REELS` error | account Professional (Business/Creator) nahi hai |
 | IG `video_url` fetch fail | URL public nahi hai, ya redirect/auth maang raha hai |
 | `quotaExceeded` (YT) | din ka 6 upload limit cross — kal chalega |

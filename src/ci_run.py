@@ -5,7 +5,7 @@ Runs in GitHub Actions (or locally).
 - Normalizes to vertical 1080x1920, 30fps, <=180s.
 - Publishes to YouTube (public, madeForKids: false).
 - Publishes to Instagram Reels (using temporary GitHub Releases asset hosting).
-- Cleanly skips Instagram if META_PAGE_TOKEN and IG_USER_ID are unset.
+- Cleanly skips Instagram if IG_ACCESS_TOKEN and IG_USER_ID are unset.
 - On success: moves Drive file to 'Uploaded' subfolder and updates state/uploaded.json.
 - On failure: leaves Drive file alone for next retry.
 """
@@ -252,7 +252,7 @@ def run(cfg, max_uploads=1, dry_run=False):
         if dry_run:
             log.write(f"[dry-run] Successfully generated and verified metadata for {file_name} ({file_id}).")
             if not upload_instagram_ci.is_available(cfg):
-                log.write("[dry-run] [ig] SKIPPED: META_PAGE_TOKEN and/or IG_USER_ID are unset.")
+                log.write("[dry-run] [ig] SKIPPED: IG_ACCESS_TOKEN and/or IG_USER_ID are unset.")
             for p in [local_video, norm_video]:
                 if os.path.exists(p):
                     try:
@@ -323,7 +323,7 @@ def run(cfg, max_uploads=1, dry_run=False):
                 if rel_info:
                     host_media.delete_media(rel_info, token=media_token)
         else:
-            log.write("[ig] SKIPPED: META_PAGE_TOKEN and/or IG_USER_ID are unset.")
+            log.write("[ig] SKIPPED: IG_ACCESS_TOKEN and/or IG_USER_ID are unset.")
 
         # Move Drive file to 'Uploaded' subfolder on success
         if uploaded_folder_id:

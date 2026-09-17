@@ -117,8 +117,7 @@ def do_upload(cfg, row, video):
         return upload_youtube.upload(cfg, video, row["title"], row["description"],
                                      (row["hashtags"] or "").replace("#", "").split())
     if platform == "facebook":
-        import upload_facebook
-        return upload_facebook.upload(cfg, video, row["title"], row["description"])
+        raise NotImplementedError("Facebook Page route is disabled. Only YouTube and Instagram are supported.")
     if platform == "instagram":
         import upload_instagram
         return upload_instagram.upload(cfg, row["public_url"], row["description"])

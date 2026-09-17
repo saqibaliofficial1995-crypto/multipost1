@@ -59,8 +59,9 @@ def credentials_from_env():
     return creds
 
 
-def meta_page_token():
-    token = os.environ.get("META_PAGE_TOKEN")
+def ig_access_token():
+    token = os.environ.get("IG_ACCESS_TOKEN")
     if not token:
-        raise RuntimeError("META_PAGE_TOKEN secret missing")
+        raise RuntimeError("IG_ACCESS_TOKEN secret missing")
     return token
+
