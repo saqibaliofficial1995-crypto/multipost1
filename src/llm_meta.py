@@ -53,7 +53,11 @@ def clean_text(text):
 
 def validate_metadata(data, duration=0, channel_topic="", is_text_only=False):
     """Validates the AI output strictly against YouTube requirements and anti-hallucination rules."""
+    if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+        data = data[0]
+
     if not isinstance(data, dict):
+        print(f"[llm_meta] Validation reject: Root payload is not a dict: {type(data)}")
         return None
 
     title = clean_text(str(data.get("title", "")))
