@@ -249,3 +249,29 @@ embrace the art of high-end aesthetics and serene luxury.
 [block] Safety block: Publishing blocked because metadata path is 'text_ai_gemini'. Only 'video_ai_gemini' (or sidecar .txt) is allowed to publish live.
 
 [finish] Processed 0 video(s).
+
+===== RUN 2026-09-17T20:27:08.225286+00:00Z =====
+[start] max_uploads=1, dry_run=False
+[drive] Found 13 pending video(s) in Drive Inbox.
+
+-------- Processing: 6353be01-2f72-4c1e-909c-18670b6a8e66.mp4 (ID: 1L7pAsX-C-_4HTuBiiblbJXaP_NkRZHrC, Created: 2026-09-17T18:55:45.358Z) --------
+[drive] Downloading 6353be01-2f72-4c1e-909c-18670b6a8e66.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: video_ai_gemini
+[meta] Model used: gemini-flash-lite-latest
+[meta] Title (33 chars): Dubai Luxury Lifestyle Night View
+[meta] Description:
+Experience the vibrant energy of Dubai by night, featuring stunning waterfront views and modern skyscraper architecture.
+Discover the elegance and sophisticated ambiance of downtown Dubai through this immersive night scene.
+
+#Dubai #LuxuryLifestyle #DubaiNight
+[meta] Tags (12 items, 142 chars): ['shorts', 'Dubai', 'luxury lifestyle', 'Dubai night view', 'Dubai skyline', 'waterfront', 'architecture', 'city lights', 'nightlife', 'travel Dubai', 'modern city', 'urban view']
+[meta] Hashtags: ['#Dubai', '#LuxuryLifestyle', '#DubaiNight']
+[yt] Uploading to YouTube...
+[yt] Published successfully: https://www.youtube.com/watch?v=R-Cuzbm4XX4
+[ig] SKIPPED: META_PAGE_TOKEN and/or IG_USER_ID are unset.
+[drive] Moved 6353be01-2f72-4c1e-909c-18670b6a8e66.mp4 to 'Uploaded' subfolder.
+[state] Recorded 1L7pAsX-C-_4HTuBiiblbJXaP_NkRZHrC in state/uploaded.json
+
+[finish] Processed 1 video(s).
