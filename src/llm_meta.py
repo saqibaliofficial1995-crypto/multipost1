@@ -137,7 +137,16 @@ def validate_metadata(data, duration=0, channel_topic=""):
 
 def discover_model(api_key):
     """Discovers available models for the given API key and selects the best free-tier video model."""
-    preferred = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
+    preferred = [
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-001",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-001",
+        "gemini-1.5-flash-002",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-pro",
+    ]
     headers = {"x-goog-api-key": api_key, "Accept": "application/json"}
     try:
         r = requests.get(f"{BASE_API}/models", headers=headers, params={"key": api_key}, timeout=15)
@@ -148,17 +157,20 @@ def discover_model(api_key):
                 for m in models_data
                 if "generateContent" in m.get("supportedGenerationMethods", [])
             ]
+            print(f"[llm_meta] Supported models: {supported}")
             for pref in preferred:
                 if pref in supported:
                     return pref
-            for m in supported:
-                if m.startswith("gemini-") and "flash" in m:
-                    return m
+            for s in supported:
+                if "2.0-flash" in s or "1.5-flash" in s:
+                    return s
             if supported:
                 return supported[0]
+        else:
+            print(f"[llm_meta] Models list failed (HTTP {r.status_code}): {r.text}")
     except Exception as e:
         print(f"[llm_meta] Model discovery warning: {e}")
-    return "gemini-2.0-flash"
+    return "gemini-1.5-flash"
 
 
 def upload_video_to_gemini(video_path, api_key):
@@ -184,7 +196,9 @@ def upload_video_to_gemini(video_path, api_key):
         data=init_body,
         timeout=30
     )
-    init_resp.raise_for_status()
+    if init_resp.status_code != 200:
+        print(f"[llm_meta] Files API init failed (HTTP {init_resp.status_code}): {init_resp.text}")
+        init_resp.raise_for_status()
 
     upload_url = init_resp.headers.get("X-Goog-Upload-URL") or init_resp.headers.get("x-goog-upload-url")
     if not upload_url:
@@ -201,7 +215,10 @@ def upload_video_to_gemini(video_path, api_key):
         "X-Goog-Upload-Command": "upload, finalize"
     }
     upload_resp = requests.post(upload_url, headers=upload_headers, data=file_bytes, timeout=180)
-    upload_resp.raise_for_status()
+    if upload_resp.status_code != 200:
+        print(f"[llm_meta] Files API upload chunk failed (HTTP {upload_resp.status_code}): {upload_resp.text}")
+        upload_resp.raise_for_status()
+
     file_info = upload_resp.json().get("file", {})
     remote_name = file_info.get("name")
     remote_uri = file_info.get("uri")
@@ -215,6 +232,8 @@ def upload_video_to_gemini(video_path, api_key):
             params={"key": api_key},
             timeout=20
         )
+        if poll_resp.status_code != 200:
+            print(f"[llm_meta] Files API poll error (HTTP {poll_resp.status_code}): {poll_resp.text}")
         poll_resp.raise_for_status()
         state = poll_resp.json().get("state")
         if state == "ACTIVE":
@@ -289,7 +308,10 @@ Output MUST be raw valid JSON adhering strictly to this schema:
             json=payload,
             timeout=90
         )
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            print(f"[llm_meta] Video generateContent error (HTTP {resp.status_code}): {resp.text}")
+            resp.raise_for_status()
+
         cand = resp.json().get("candidates", [{}])[0]
         text_content = cand.get("content", {}).get("parts", [{}])[0].get("text", "")
 
@@ -337,7 +359,10 @@ Output MUST be raw valid JSON adhering strictly to this schema:
             json=payload,
             timeout=30
         )
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            print(f"[llm_meta] Text generateContent error (HTTP {resp.status_code}): {resp.text}")
+            resp.raise_for_status()
+
         cand = resp.json().get("candidates", [{}])[0]
         text_content = cand.get("content", {}).get("parts", [{}])[0].get("text", "")
 
