@@ -54,6 +54,9 @@ def set_secret_stdin(name, value):
 
 
 def main():
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(repo_root)
+
     print("\n" + "=" * 65)
     print(" MULTIPOST CONFIGURATION UPDATE")
     print("=" * 65)
