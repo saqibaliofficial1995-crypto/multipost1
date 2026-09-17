@@ -21,6 +21,10 @@
       "uploaded_at_utc": "2026-09-17T18:31:20.624335+00:00Z",
       "youtube_url": "https://www.youtube.com/watch?v=xJfx0UbyF4g",
       "youtube_video_id": "xJfx0UbyF4g"
+    },
+    "1jM0bszXkpG20icy7QUvkxeWo6Ntv0JYG": {
+      "attempts": 1,
+      "last_error": "Publishing blocked: text_ai_gemini not allowed for live publish"
     }
   }
 }
