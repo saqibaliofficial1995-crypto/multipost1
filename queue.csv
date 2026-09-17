@@ -1,0 +1,4 @@
+id,source,title,description,hashtags,platforms,scheduled_date
+fight01,https://cdn.example.com/videos/fight01.mp4,Blindfolded Sword Girl — Night Duel,AAA cinematic fight sequence shot on anamorphic lenses,#shorts #reels #cinematic #ai,youtube|facebook|instagram,2026-09-17
+fight02,s3:raw/fight02.mp4,Blindfolded Sword Girl — Rooftop Chase,Slow-motion blade choreography in the rain,#shorts #reels #action,youtube|facebook|instagram,2026-09-18
+fight03,s3:raw/fight03.mp4,Blindfolded Sword Girl — Temple Standoff,Final duel at the abandoned temple,#shorts #reels #cinematic,youtube|instagram,

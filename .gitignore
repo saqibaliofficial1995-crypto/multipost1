@@ -1,0 +1,12 @@
+tokens/
+config.yaml
+*.sqlite3*
+work/
+processed/
+inbox/*
+!inbox/README.txt
+__pycache__/
+.venv/
+*.log
+!state/run.log
+.setup_state.json

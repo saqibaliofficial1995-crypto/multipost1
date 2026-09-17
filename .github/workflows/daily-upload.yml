@@ -1,0 +1,100 @@
+name: Daily Multipost Upload
+
+# PC band ho to bhi chalega — sab kuch GitHub ke server par chalta hai.
+# NOTE: cron UTC me hota hai. Neeche PKT (UTC+5) ke hisaab se set kiya gaya hai.
+on:
+  schedule:
+    - cron: "0 4,7,10,13,16 * * *"   # 09:00, 12:00, 15:00, 18:00, 21:00 PKT (UTC 4, 7, 10, 13, 16)
+  workflow_dispatch:
+    inputs:
+      max_uploads:
+        description: "Max videos for this run"
+        required: false
+        default: "1"
+      dry_run:
+        description: "true = test run without uploading"
+        required: false
+        default: "false"
+
+# state file repo me commit karne ke liye
+permissions:
+  contents: write
+
+# do run ek saath na chalein (duplicate upload se bachne ke liye)
+concurrency:
+  group: multipost-upload
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          ffmpeg -version | head -1
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Run uploader
+        env:
+          # ---- Google Drive & YouTube Secrets ----
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
+          # ---- Instagram & Media Host ----
+          META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          MEDIA_REPO: "multipost-media"
+          MEDIA_REPO_OWNER: ${{ github.repository_owner }}
+          GH_TOKEN: ${{ secrets.MEDIA_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+          # ---- Storage (optional S3 fallback) ----
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          S3_PUBLIC_BASE: ${{ secrets.S3_PUBLIC_BASE }}
+          # ---- Run options ----
+          MAX_UPLOADS: ${{ github.event.inputs.max_uploads || '1' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: python src/ci_run.py --config config.ci.yaml
+
+      - name: Commit state (duplicate upload rokne ke liye)
+        if: always()
+        run: |
+          git config user.name "multipost-bot"
+          git config user.email "actions@github.com"
+          git add state/uploaded.json state/run.log || true
+          if git diff --staged --quiet; then
+            echo "koi state change nahi"
+          else
+            git commit -m "chore: multipost state update [skip ci]"
+            git pull --rebase --autostash origin ${{ github.ref_name }} || true
+            git push
+          fi
+
+      - name: Upload run log as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multipost-log-${{ github.run_number }}
+          path: state/run.log
+          retention-days: 14
+          if-no-files-found: ignore

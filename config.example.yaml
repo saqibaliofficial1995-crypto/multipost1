@@ -1,0 +1,62 @@
+# ===== MULTIPOST CONFIG =====
+# Copy this file to config.yaml and fill in your own values.
+# Never commit config.yaml or the tokens/ folder to git.
+
+paths:
+  inbox: "./inbox"            # naye videos yahan daalo
+  processed: "./processed"    # upload hone ke baad yahan move ho jaayenge
+  work: "./work"              # ffmpeg ke normalized outputs
+  db: "./multipost.sqlite3"
+  tokens: "./tokens"
+
+platforms:
+  youtube: true
+  facebook: true
+  instagram: true
+
+youtube:
+  client_secret_file: "./tokens/google_client_secret.json"
+  token_file: "./tokens/yt_token.json"
+  privacy_status: "public"     # public | unlisted | private
+  made_for_kids: false
+  category_id: "22"            # 22 = People & Blogs, 24 = Entertainment
+  default_tags: ["shorts", "viral", "ai"]
+
+facebook:
+  page_id: "YOUR_FB_PAGE_ID"
+  # Page access token (long-lived). Ise scripts/get_meta_tokens.py se banao.
+  page_access_token_file: "./tokens/fb_page_token.json"
+  publish_as_reel: true
+
+instagram:
+  ig_user_id: "YOUR_IG_BUSINESS_USER_ID"
+  page_access_token_file: "./tokens/fb_page_token.json"   # same token as FB page
+  # IG Graph API ko PUBLIC https URL chahiye hoti hai (local file accept nahi karta).
+  # Options: "local_server" (ngrok/cloudflared ke saath) ya "external"
+  hosting:
+    mode: "external"
+    # Agar mode = external: aap video pehle kisi public bucket par daalo
+    # aur uska URL inbox ke sidecar .json me "public_url" field me do.
+    public_base_url: "https://your-bucket.example.com/videos"
+
+encode:
+  # Shorts / Reels safe preset
+  target_aspect: "9:16"
+  width: 1080
+  height: 1920
+  fps: 30
+  max_seconds: 180             # Shorts limit = 3 min
+  video_bitrate: "6M"
+  audio_bitrate: "128k"
+
+schedule:
+  # 24h format, local machine timezone
+  daily_times: ["09:30", "15:00", "20:30"]
+  max_uploads_per_day: 3
+  # YouTube API quota: 1 upload ~1600 units, daily quota 10000 => max ~6/day
+  stagger_minutes_between_platforms: 4
+
+metadata:
+  # Agar sidecar json nahi diya, to filename se title banega
+  fallback_hashtags: "#shorts #reels #viral"
+  append_hashtags_to_description: true
