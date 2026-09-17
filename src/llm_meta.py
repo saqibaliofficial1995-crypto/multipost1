@@ -136,33 +136,33 @@ def validate_metadata(data, duration=0, channel_topic=""):
 
 
 def discover_model(api_key):
-    """Discovers available models for the given API key and selects the best free-tier video model."""
+    """Discovers available models for the given API key and selects the best free-tier model."""
     preferred = [
+        "gemini-3.6-flash",
+        "gemini-3.7-flash",
+        "gemini-3.8-flash",
+        "gemini-3.5-flash",
+        "gemini-flash-latest",
         "gemini-2.0-flash",
-        "gemini-2.0-flash-001",
         "gemini-1.5-flash",
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-flash-001",
-        "gemini-1.5-flash-002",
-        "gemini-1.5-flash-8b",
-        "gemini-1.5-pro",
     ]
     headers = {"x-goog-api-key": api_key, "Accept": "application/json"}
     try:
         r = requests.get(f"{BASE_API}/models", headers=headers, params={"key": api_key}, timeout=15)
         if r.status_code == 200:
             models_data = r.json().get("models", [])
+            # Filter out deprecated models like gemini-2.5-flash
             supported = [
                 m.get("name", "").replace("models/", "")
                 for m in models_data
-                if "generateContent" in m.get("supportedGenerationMethods", [])
+                if "generateContent" in m.get("supportedGenerationMethods", []) and "2.5-flash" not in m.get("name", "")
             ]
-            print(f"[llm_meta] Supported models: {supported}")
+            print(f"[llm_meta] Supported active models: {supported}")
             for pref in preferred:
                 if pref in supported:
                     return pref
             for s in supported:
-                if "2.0-flash" in s or "1.5-flash" in s:
+                if "flash" in s:
                     return s
             if supported:
                 return supported[0]
@@ -170,7 +170,7 @@ def discover_model(api_key):
             print(f"[llm_meta] Models list failed (HTTP {r.status_code}): {r.text}")
     except Exception as e:
         print(f"[llm_meta] Model discovery warning: {e}")
-    return "gemini-1.5-flash"
+    return "gemini-3.6-flash"
 
 
 def upload_video_to_gemini(video_path, api_key):
