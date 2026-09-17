@@ -62,6 +62,16 @@ def load_cfg(path):
     return cfg
 
 
+def is_instagram_enabled(cfg):
+    platforms = cfg.get("platforms", {})
+    if "instagram" in platforms and not platforms["instagram"]:
+        return False
+    ig_cfg = cfg.get("instagram", {})
+    if "enabled" in ig_cfg and not ig_cfg["enabled"]:
+        return False
+    return True
+
+
 def load_state(path):
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
@@ -251,7 +261,9 @@ def run(cfg, max_uploads=1, dry_run=False):
 
         if dry_run:
             log.write(f"[dry-run] Successfully generated and verified metadata for {file_name} ({file_id}).")
-            if not upload_instagram_ci.is_available(cfg):
+            if not is_instagram_enabled(cfg):
+                log.write("[ig] disabled by config.")
+            elif not upload_instagram_ci.is_available(cfg):
                 log.write("[dry-run] [ig] SKIPPED: IG_ACCESS_TOKEN and/or IG_USER_ID are unset.")
             for p in [local_video, norm_video]:
                 if os.path.exists(p):
@@ -285,7 +297,9 @@ def run(cfg, max_uploads=1, dry_run=False):
         # Instagram Upload (via GitHub Releases temporary asset host or S3)
         ig_id = item_state.get("instagram_id")
         ig_permalink = item_state.get("instagram_permalink", "")
-        if ig_id:
+        if not is_instagram_enabled(cfg):
+            log.write("[ig] disabled by config.")
+        elif ig_id:
             log.write(f"[ig] Already published to Instagram ({ig_permalink}). Skipping.")
         elif upload_instagram_ci.is_available(cfg):
             media_token = os.environ.get("MEDIA_REPO_TOKEN") or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")

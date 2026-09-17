@@ -6,7 +6,7 @@ drive:
   inbox_folder_id: 1_UgiT31n0xkdUOnPiFY0xf6fty7mEEXH
 platforms:
   youtube: true
-  instagram: true
+  instagram: false
 youtube:
   privacy_status: public
   made_for_kids: false
@@ -15,6 +15,7 @@ youtube:
   - shorts
   - viral
 instagram:
+  enabled: false
   upload_prefix: multipost/vertical
 encode:
   enabled: true
