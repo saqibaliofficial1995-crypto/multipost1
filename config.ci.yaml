@@ -1,50 +1,37 @@
-# ===== CLOUD (GitHub Actions) CONFIG =====
-# Yahan koi secret NAHI hota. Saare tokens GitHub Secrets se env vars me aate hain:
-#   YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN
-#   META_PAGE_TOKEN, FB_PAGE_ID, IG_USER_ID
-#   S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY, S3_PUBLIC_BASE
-# Ye file safely git me commit kar sakte ho.
-
 paths:
-  state: "state/uploaded.json"       # kya upload ho chuka (repo me commit hota hai)
-  log: "state/run.log"
-  work: "work"                       # runner ka temp folder
-
+  state: state/uploaded.json
+  log: state/run.log
+  work: work
 drive:
-  inbox_folder_id: "1aUp67POY-VoCMMx-T1H7jFb1em924DB4"
-
+  inbox_folder_id: 1_UgiT31n0xkdUOnPiFY0xf6fty7mEEXH
 platforms:
   youtube: true
   facebook: true
   instagram: true
-
 youtube:
-  privacy_status: "public"           # public | unlisted | private
+  privacy_status: public
   made_for_kids: false
-  category_id: "22"
-  default_tags: ["shorts", "viral"]
-
+  category_id: '22'
+  default_tags:
+  - shorts
+  - viral
 facebook:
   publish_as_reel: true
-  # page_id secret se aata hai (FB_PAGE_ID)
-
 instagram:
-  # ig_user_id secret se aata hai (IG_USER_ID)
-  upload_prefix: "multipost/vertical"   # normalized video bucket me yahan jaayegi
-
+  upload_prefix: multipost/vertical
 encode:
-  enabled: true                      # false = video jaisi hai waisi upload hogi
+  enabled: true
   width: 1080
   height: 1920
   fps: 30
   max_seconds: 180
-  video_bitrate: "6M"
-  audio_bitrate: "128k"
-
+  video_bitrate: 6M
+  audio_bitrate: 128k
 schedule:
-  max_videos_per_run: 1              # workflow_dispatch se override kar sakte ho
-  max_attempts: 3                    # fail hone par itni koshish, phir chhod dega
-
+  max_videos_per_run: 1
+  max_attempts: 3
 metadata:
-  fallback_hashtags: "#shorts #reels #viral"
+  fallback_hashtags: '#shorts #reels #viral'
   append_hashtags_to_description: true
+  channel_topic: Dubai luxury lifestyle
+

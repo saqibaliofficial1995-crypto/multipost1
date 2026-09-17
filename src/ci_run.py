@@ -171,46 +171,6 @@ def run(cfg, max_uploads=1, dry_run=False):
             any_error = True
             continue
 
-        # Probe video duration
-        duration = 0
-        try:
-            p_info = normalize.probe(local_video)
-            duration = p_info.get("duration", 0)
-        except Exception as e:
-            log.write(f"[warn] Could not probe video duration ({e})")
-
-        # Metadata extraction (Sidecar .txt wins, else AI Gemini, else filename fallback)
-        import llm_meta
-        if sidecar_text:
-            meta = drive_source.extract_metadata(file_name, sidecar_text=sidecar_text)
-            path_used = "sidecar_txt"
-        else:
-            channel_topic = cfg.get("metadata", {}).get("channel_topic", "")
-            default_desc = cfg.get("metadata", {}).get("default_description", "")
-            meta = llm_meta.generate_metadata(file_name, duration=duration, channel_topic=channel_topic, fallback_desc=default_desc)
-            path_used = meta.get("path_used", "filename_fallback")
-
-        log.write(f"[meta] Path used: {path_used}")
-        title = meta["title"]
-        desc = meta["description"]
-        tags = meta["tags"]
-        hashtags = meta.get("hashtags", [])
-
-        log.write(f"[meta] Title: {title}")
-        log.write(f"[meta] Description:\n{desc}")
-        log.write(f"[meta] Tags: {tags}")
-        log.write(f"[meta] Hashtags: {hashtags}")
-
-        if dry_run:
-            log.write(f"[dry-run] Successfully generated and verified metadata for {file_name} ({file_id}).")
-            if os.path.exists(local_video):
-                try:
-                    os.remove(local_video)
-                except Exception:
-                    pass
-            processed_count += 1
-            continue
-
         # Normalization (ffmpeg 1080x1920, 30fps, <=180s)
         norm_video = os.path.join(work_dir, f"norm_{file_id}.mp4")
         try:
@@ -226,6 +186,55 @@ def run(cfg, max_uploads=1, dry_run=False):
             item_state["last_error"] = str(e)[:400]
             save_state(state_file, state)
             any_error = True
+            continue
+
+        # Probe video duration from normalized video
+        duration = 0
+        try:
+            p_info = normalize.probe(norm_video)
+            duration = p_info.get("duration", 0)
+        except Exception as e:
+            log.write(f"[warn] Could not probe video duration ({e})")
+
+        # Metadata extraction (Sidecar .txt wins, else AI Gemini video analysis, else fallbacks)
+        import llm_meta
+        if sidecar_text:
+            meta = drive_source.extract_metadata(file_name, sidecar_text=sidecar_text)
+            path_used = "sidecar_txt"
+        else:
+            channel_topic = cfg.get("metadata", {}).get("channel_topic", "")
+            default_desc = cfg.get("metadata", {}).get("default_description", "")
+            default_tags = cfg.get("metadata", {}).get("default_tags", ["shorts", "viral"])
+            meta = llm_meta.generate_metadata(
+                video_path=norm_video,
+                filename=file_name,
+                duration=duration,
+                channel_topic=channel_topic,
+                default_desc=default_desc,
+                default_tags=default_tags
+            )
+            path_used = meta.get("path_used", "topic_default_fallback")
+
+        log.write(f"[meta] Path used: {path_used}")
+        title = meta["title"]
+        desc = meta["description"]
+        tags = meta["tags"]
+        hashtags = meta.get("hashtags", [])
+
+        log.write(f"[meta] Title: {title}")
+        log.write(f"[meta] Description:\n{desc}")
+        log.write(f"[meta] Tags: {tags}")
+        log.write(f"[meta] Hashtags: {hashtags}")
+
+        if dry_run:
+            log.write(f"[dry-run] Successfully generated and verified metadata for {file_name} ({file_id}).")
+            for p in [local_video, norm_video]:
+                if os.path.exists(p):
+                    try:
+                        os.remove(p)
+                    except Exception:
+                        pass
+            processed_count += 1
             continue
 
         # YouTube Upload

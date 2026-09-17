@@ -2,9 +2,9 @@
 
 Performs:
 1. Prompt for Drive folder link, extract ID, verify access, count videos, create 'Uploaded' subfolder.
-2. Prompt for Gemini API key via getpass, verify API call, set secret via stdin.
-3. Prompt for channel topic and write to config.ci.yaml.
-4. Update GitHub secrets and git configuration.
+2. Prompt for channel topic (defaults to 'Dubai luxury lifestyle') and write to config.ci.yaml.
+3. Prompt for Gemini API key via getpass, verify via x-goog-api-key header, discover available models, test generation, set secret via stdin.
+4. Deploy DRIVE_FOLDER_ID and GEMINI_API_KEY to GitHub Secrets via stdin.
 """
 import getpass
 import json
@@ -27,7 +27,7 @@ from google.oauth2.credentials import Credentials
 
 REPO = "bjviufutu-dot/multipost"
 DRIVE_API = "https://www.googleapis.com/drive/v3"
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+GEMINI_BASE_API = "https://generativelanguage.googleapis.com/v1beta"
 VIDEO_EXTS = (".mp4", ".mov", ".m4v")
 
 
@@ -62,8 +62,25 @@ def main():
     # 1. Drive Folder Link
     # -------------------------------------------------------------
     print("\n[1/3] GOOGLE DRIVE FOLDER SETUP")
-    folder_input = input("Paste your Google Drive folder link: ").strip()
-    folder_id = extract_folder_id(folder_input)
+
+    current_folder_id = None
+    if os.path.exists(".setup_state.json"):
+        try:
+            with open(".setup_state.json", "r", encoding="utf-8") as f:
+                st = json.load(f)
+            current_folder_id = st.get("config", {}).get("drive_folder_id")
+        except Exception:
+            pass
+
+    prompt_text = "Paste your Google Drive folder link: "
+    if current_folder_id:
+        prompt_text = f"Paste your Google Drive folder link [press Enter to keep '{current_folder_id}']: "
+
+    folder_input = input(prompt_text).strip()
+    if not folder_input and current_folder_id:
+        folder_id = current_folder_id
+    else:
+        folder_id = extract_folder_id(folder_input)
 
     if not folder_id:
         print("[FAIL] Could not parse a valid folder ID from the link provided.")
@@ -81,10 +98,10 @@ def main():
     if not creds.valid and creds.refresh_token:
         creds.refresh(Request())
 
-    headers = {"Authorization": f"Bearer {creds.token}", "Accept": "application/json"}
+    drive_headers = {"Authorization": f"Bearer {creds.token}", "Accept": "application/json"}
 
     try:
-        r = requests.get(f"{DRIVE_API}/files/{folder_id}", headers=headers, params={"fields": "id, name, mimeType, trashed"}, timeout=25)
+        r = requests.get(f"{DRIVE_API}/files/{folder_id}", headers=drive_headers, params={"fields": "id, name, mimeType, trashed"}, timeout=25)
         if r.status_code == 404:
             print("[FAIL] Access failed. Cause: wrong link (the folder ID does not exist or link is malformed).")
             sys.exit(1)
@@ -113,8 +130,7 @@ def main():
     old_folder_id = "1aUp67POY-VoCMMx-T1H7jFb1em924DB4"
     old_video_id = "xJfx0UbyF4g"
     try:
-        # Delete old folder from Drive
-        del_f = requests.delete(f"{DRIVE_API}/files/{old_folder_id}", headers=headers, timeout=15)
+        del_f = requests.delete(f"{DRIVE_API}/files/{old_folder_id}", headers=drive_headers, timeout=15)
         if del_f.status_code in (200, 204):
             print(f"  - Old auto-created Drive folder deleted: True (ID: {old_folder_id})")
         elif del_f.status_code == 404:
@@ -123,8 +139,7 @@ def main():
         pass
 
     try:
-        # Delete test video from YouTube
-        del_v = requests.delete(f"https://www.googleapis.com/youtube/v3/videos?id={old_video_id}", headers=headers, timeout=15)
+        del_v = requests.delete(f"https://www.googleapis.com/youtube/v3/videos?id={old_video_id}", headers=drive_headers, timeout=15)
         if del_v.status_code in (200, 204):
             print(f"  - YouTube test video deleted: True (ID: {old_video_id})")
         elif del_v.status_code == 404:
@@ -134,7 +149,7 @@ def main():
 
     # Count videos currently in folder
     q = f"'{folder_id}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'"
-    c_resp = requests.get(f"{DRIVE_API}/files", headers=headers, params={"q": q, "fields": "files(id, name)"}, timeout=25)
+    c_resp = requests.get(f"{DRIVE_API}/files", headers=drive_headers, params={"q": q, "fields": "files(id, name)"}, timeout=25)
     c_resp.raise_for_status()
     all_files = c_resp.json().get("files", [])
     videos = [f for f in all_files if os.path.splitext(f.get("name", ""))[1].lower() in VIDEO_EXTS]
@@ -146,7 +161,7 @@ def main():
 
     # Create 'Uploaded' subfolder inside user folder if not present
     sub_q = f"name = 'Uploaded' and '{folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-    sub_res = requests.get(f"{DRIVE_API}/files", headers=headers, params={"q": sub_q, "fields": "files(id, name)"}, timeout=25)
+    sub_res = requests.get(f"{DRIVE_API}/files", headers=drive_headers, params={"q": sub_q, "fields": "files(id, name)"}, timeout=25)
     sub_res.raise_for_status()
     sub_files = sub_res.json().get("files", [])
     if sub_files:
@@ -154,7 +169,7 @@ def main():
         print(f"  - 'Uploaded' subfolder already exists: True (ID: {uploaded_id})")
     else:
         meta = {"name": "Uploaded", "mimeType": "application/vnd.google-apps.folder", "parents": [folder_id]}
-        u_resp = requests.post(f"{DRIVE_API}/files", headers=headers, json=meta, params={"fields": "id, name"}, timeout=25)
+        u_resp = requests.post(f"{DRIVE_API}/files", headers=drive_headers, json=meta, params={"fields": "id, name"}, timeout=25)
         u_resp.raise_for_status()
         uploaded_id = u_resp.json()["id"]
         print(f"  - Created 'Uploaded' subfolder: True (ID: {uploaded_id})")
@@ -177,9 +192,11 @@ def main():
     # 2. Channel Topic
     # -------------------------------------------------------------
     print("\n[2/3] CHANNEL TOPIC SETUP")
-    topic = input("Enter your channel topic / niche (e.g. Tech Reviews, Gaming Clips, DIY, Cooking): ").strip()
-    if not topic:
-        topic = "General Entertainment"
+    default_topic = "Dubai luxury lifestyle"
+    current_topic = cfg.get("metadata", {}).get("channel_topic", default_topic)
+    topic_prompt = f"Enter your channel topic / niche [press Enter for '{current_topic}']: "
+    topic_in = input(topic_prompt).strip()
+    topic = topic_in if topic_in else current_topic
     print(f"  - Channel Topic set to: '{topic}'")
     cfg.setdefault("metadata", {})["channel_topic"] = topic
 
@@ -198,19 +215,48 @@ def main():
         print("[FAIL] Gemini API Key cannot be empty.")
         sys.exit(1)
 
-    # Verify Gemini API Key
-    print("Verifying Gemini API key with test generation...")
+    # Verify Gemini API Key via x-goog-api-key header and discover available models
+    print("Verifying Gemini API key and checking available models...")
+    gemini_headers = {
+        "x-goog-api-key": gemini_key,
+        "Accept": "application/json"
+    }
+
+    m_resp = requests.get(f"{GEMINI_BASE_API}/models", headers=gemini_headers, timeout=20)
+    if m_resp.status_code != 200:
+        err_msg = m_resp.text
+        print(f"[FAIL] Gemini API Key verification failed (HTTP {m_resp.status_code}): {err_msg}")
+        sys.exit(1)
+
+    models_data = m_resp.json().get("models", [])
+    model_names = [
+        m.get("name", "").replace("models/", "")
+        for m in models_data
+        if "generateContent" in m.get("supportedGenerationMethods", [])
+    ]
+    preferred = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
+    chosen_model = next((m for m in preferred if m in model_names), None) or (model_names[0] if model_names else "gemini-2.0-flash")
+
+    print(f"  - Gemini API Key verified: True")
+    print(f"  - Available models found: {len(model_names)}")
+    print(f"  - Selected model for video analysis: {chosen_model}")
+
+    # Test generation with chosen model
+    gen_url = f"{GEMINI_BASE_API}/models/{chosen_model}:generateContent"
     test_payload = {
         "contents": [{"parts": [{"text": "Reply with only the word OK"}]}],
         "generationConfig": {"temperature": 0.1}
     }
-    g_resp = requests.post(f"{GEMINI_API_URL}?key={gemini_key}", json=test_payload, timeout=20)
-    if g_resp.status_code == 200:
-        print("  - Gemini API Key verified: True")
+    t_resp = requests.post(
+        gen_url,
+        headers={"x-goog-api-key": gemini_key, "Content-Type": "application/json"},
+        json=test_payload,
+        timeout=20
+    )
+    if t_resp.status_code == 200:
+        print("  - Model generateContent test: True")
     else:
-        err_msg = g_resp.text
-        print(f"[FAIL] Gemini API Key verification failed (HTTP {g_resp.status_code}): {err_msg}")
-        sys.exit(1)
+        print(f"[WARN] Test generation warning (HTTP {t_resp.status_code}): {t_resp.text}")
 
     # -------------------------------------------------------------
     # 4. Deploy Secrets to GitHub
