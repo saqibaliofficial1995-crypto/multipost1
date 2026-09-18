@@ -39,6 +39,16 @@
       "uploaded_at_utc": "2026-09-18T07:07:40.853835+00:00Z",
       "youtube_url": "https://www.youtube.com/watch?v=6PRFtKczAqY",
       "youtube_video_id": "6PRFtKczAqY"
+    },
+    {
+      "drive_file_id": "1viXqX1YmPxNAN2PJZNHmiy6ATx_cm9Oz",
+      "filename": "8f6e6721-eab5-4244-88e2-3acadb90beab.mp4",
+      "instagram_id": null,
+      "instagram_permalink": "",
+      "title": "Dubai Skyline Night Views Featuring Burj Khalifa",
+      "uploaded_at_utc": "2026-09-18T10:07:29.538923+00:00Z",
+      "youtube_url": "https://www.youtube.com/watch?v=pqTlwrT3xnI",
+      "youtube_video_id": "pqTlwrT3xnI"
     }
   ],
   "items": {
@@ -85,6 +95,16 @@
     "1jM0bszXkpG20icy7QUvkxeWo6Ntv0JYG": {
       "attempts": 1,
       "last_error": "Publishing blocked: text_ai_gemini not allowed for live publish"
+    },
+    "1viXqX1YmPxNAN2PJZNHmiy6ATx_cm9Oz": {
+      "drive_file_id": "1viXqX1YmPxNAN2PJZNHmiy6ATx_cm9Oz",
+      "filename": "8f6e6721-eab5-4244-88e2-3acadb90beab.mp4",
+      "instagram_id": null,
+      "instagram_permalink": "",
+      "title": "Dubai Skyline Night Views Featuring Burj Khalifa",
+      "uploaded_at_utc": "2026-09-18T10:07:29.538923+00:00Z",
+      "youtube_url": "https://www.youtube.com/watch?v=pqTlwrT3xnI",
+      "youtube_video_id": "pqTlwrT3xnI"
     }
   }
 }
