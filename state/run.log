@@ -372,3 +372,29 @@ Perfect for anyone exploring the dynamic nightlife and luxury lifestyle of Dubai
 [state] Recorded 15_XgdlH5vvWy-efqK_0Aup-Z8Kp3JC1H in state/uploaded.json
 
 [finish] Processed 1 video(s).
+
+===== RUN 2026-09-18T07:06:17.959036+00:00Z =====
+[start] max_uploads=1, dry_run=False
+[drive] Found 11 pending video(s) in Drive Inbox.
+
+-------- Processing: aff18674-451a-4e03-bc39-afce2695c324.mp4 (ID: 1iY_jZLuPm5Bo6mLbsqSQKkV4qGfcK6-H, Created: 2026-09-17T18:55:56.976Z) --------
+[drive] Downloading aff18674-451a-4e03-bc39-afce2695c324.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: video_ai_gemini
+[meta] Model used: gemini-flash-lite-latest
+[meta] Title (50 chars): Dubai Skyline Evening Drive Featuring Burj Khalifa
+[meta] Description:
+Experience a scenic evening drive through Dubai with stunning views of illuminated skyscrapers and the iconic Burj Khalifa. Watch the warm sunset glow light up the modern city architecture and bustling highway.
+Enjoy the vibrant atmosphere of Dubai's luxury landscape as traffic moves along the lit downtown streets during dusk.
+
+#Dubai #BurjKhalifa #LuxuryLifestyle
+[meta] Tags (11 items, 162 chars): ['shorts', 'Dubai skyline', 'Burj Khalifa', 'Dubai evening drive', 'Downtown Dubai', 'Dubai architecture', 'city at sunset', 'Dubai luxury lifestyle', 'urban drive', 'skyscrapers', 'Dubai travel']
+[meta] Hashtags: ['#Dubai', '#BurjKhalifa', '#LuxuryLifestyle']
+[yt] Uploading to YouTube...
+[yt] Published successfully: https://www.youtube.com/watch?v=6PRFtKczAqY
+[ig] disabled by config.
+[drive] Moved aff18674-451a-4e03-bc39-afce2695c324.mp4 to 'Uploaded' subfolder.
+[state] Recorded 1iY_jZLuPm5Bo6mLbsqSQKkV4qGfcK6-H in state/uploaded.json
+
+[finish] Processed 1 video(s).
