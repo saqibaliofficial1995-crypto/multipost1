@@ -345,3 +345,30 @@ Experience the vibrant nightlife and iconic landmarks of Downtown Dubai.
 [ig] disabled by config.
 
 [finish] Processed 1 video(s).
+
+===== RUN 2026-09-18T04:06:52.420663+00:00Z =====
+[start] max_uploads=1, dry_run=False
+[drive] Found 12 pending video(s) in Drive Inbox.
+
+-------- Processing: de6369f5-5996-4ccb-9c2f-bb6c00fa672f.mp4 (ID: 15_XgdlH5vvWy-efqK_0Aup-Z8Kp3JC1H, Created: 2026-09-17T18:55:51.197Z) --------
+[drive] Downloading de6369f5-5996-4ccb-9c2f-bb6c00fa672f.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: video_ai_gemini
+[meta] Model used: gemini-flash-lite-latest
+[meta] Title (50 chars): Dubai Fountain show and Burj Khalifa light display
+[meta] Description:
+Experience the stunning Dubai Fountain show synchronized with vibrant lights on the iconic Burj Khalifa.
+Watch the dancing water jets illuminate the night sky against the backdrop of glittering downtown skyscrapers.
+Perfect for anyone exploring the dynamic nightlife and luxury lifestyle of Dubai.
+
+#dubai #burjkhalifa #dubaifountain
+[meta] Tags (12 items, 183 chars): ['shorts', 'dubai fountain', 'burj khalifa', 'dubai night view', 'downtown dubai', 'dubai nightlife', 'luxury lifestyle', 'dubai attractions', 'water fountain show', 'burj khalifa lights', 'dubai travel', 'city skyline']
+[meta] Hashtags: ['#dubai', '#burjkhalifa', '#dubaifountain']
+[yt] Uploading to YouTube...
+[yt] Published successfully: https://www.youtube.com/watch?v=cIxSHxblEmQ
+[ig] disabled by config.
+[drive] Moved de6369f5-5996-4ccb-9c2f-bb6c00fa672f.mp4 to 'Uploaded' subfolder.
+[state] Recorded 15_XgdlH5vvWy-efqK_0Aup-Z8Kp3JC1H in state/uploaded.json
+
+[finish] Processed 1 video(s).
