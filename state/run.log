@@ -451,3 +451,30 @@ Discover vibrant cityscapes, luxury waterfronts, and iconic landmarks captured i
 [state] Recorded 1fUB9pfRGzHLGKcnCLPM6WyQSMtCZh7rT in state/uploaded.json
 
 [finish] Processed 1 video(s).
+
+===== RUN 2026-09-18T16:05:59.175758+00:00Z =====
+[start] max_uploads=1, dry_run=False
+[drive] Found 8 pending video(s) in Drive Inbox.
+
+-------- Processing: 3ff6e7e5-f2b6-46e7-b7b0-a766436c2f5c.mp4 (ID: 1bOpxR_6W424AEMv6l0m17nLkA8v_-A6V, Created: 2026-09-17T18:56:13.648Z) --------
+[drive] Downloading 3ff6e7e5-f2b6-46e7-b7b0-a766436c2f5c.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: video_ai_gemini
+[meta] Model used: gemini-flash-lite-latest
+[meta] Title (42 chars): Rain falling on a green pine tree in Dubai
+[meta] Description:
+Watch the gentle rain shower pouring over a lush green pine tree in Dubai.
+Experience a moment of tranquility and nature amidst the luxury lifestyle.
+Enjoy this calming natural scene in high definition.
+
+#Dubai #Nature #Rain
+[meta] Tags (11 items, 160 chars): ['shorts', 'Dubai luxury lifestyle', 'pine tree in rain', 'nature in Dubai', 'rainy day', 'calming rain', 'green pine tree', 'Dubai nature', 'luxury living', 'relaxing rain', 'tree in the rain']
+[meta] Hashtags: ['#Dubai', '#Nature', '#Rain']
+[yt] Uploading to YouTube...
+[yt] Published successfully: https://www.youtube.com/watch?v=SDtBOU1lZS0
+[ig] disabled by config.
+[drive] Moved 3ff6e7e5-f2b6-46e7-b7b0-a766436c2f5c.mp4 to 'Uploaded' subfolder.
+[state] Recorded 1bOpxR_6W424AEMv6l0m17nLkA8v_-A6V in state/uploaded.json
+
+[finish] Processed 1 video(s).
