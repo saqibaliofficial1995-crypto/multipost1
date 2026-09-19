@@ -530,3 +530,30 @@ Enjoy the tranquil ambiance and luxurious surroundings overlooking the bustling 
 [state] Recorded 1WoSoL003licWlrrAqfEk4xrav7L7fG11 in state/uploaded.json
 
 [finish] Processed 1 video(s).
+
+===== RUN 2026-09-19T10:05:56.687743+00:00Z =====
+[start] max_uploads=1, dry_run=False
+[drive] Found 5 pending video(s) in Drive Inbox.
+
+-------- Processing: 1a8c3a2c-d3ff-44c2-92c5-064bf40e24af.mp4 (ID: 1fo52SvP2TgciAjLHYz1sxP_tU162jASD, Created: 2026-09-17T18:56:28.264Z) --------
+[drive] Downloading 1a8c3a2c-d3ff-44c2-92c5-064bf40e24af.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: video_ai_gemini
+[meta] Model used: gemini-flash-lite-latest
+[meta] Title (53 chars): Dubai Skyline Night View with Burj Khalifa Light Show
+[meta] Description:
+Experience the breathtaking night view of Dubai's illuminated skyline from a luxurious rooftop lounge.
+Watch the iconic Burj Khalifa put on a stunning laser light show against the dark evening sky.
+Discover stunning cityscapes, elegant dining settings, and the vibrant nocturnal energy of downtown Dubai.
+
+#Dubai #BurjKhalifa #LuxuryLifestyle
+[meta] Tags (13 items, 164 chars): ['shorts', 'Dubai', 'Burj Khalifa', 'Dubai skyline', 'night view', 'luxury lifestyle', 'Dubai rooftop', 'city at night', 'light show', 'downtown Dubai', 'architecture', 'travel Dubai', 'evening ambiance']
+[meta] Hashtags: ['#Dubai', '#BurjKhalifa', '#LuxuryLifestyle']
+[yt] Uploading to YouTube...
+[yt] Published successfully: https://www.youtube.com/watch?v=nqi68XGCsZ8
+[ig] disabled by config.
+[drive] Moved 1a8c3a2c-d3ff-44c2-92c5-064bf40e24af.mp4 to 'Uploaded' subfolder.
+[state] Recorded 1fo52SvP2TgciAjLHYz1sxP_tU162jASD in state/uploaded.json
+
+[finish] Processed 1 video(s).
