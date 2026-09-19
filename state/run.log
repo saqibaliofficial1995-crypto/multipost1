@@ -478,3 +478,29 @@ Enjoy this calming natural scene in high definition.
 [state] Recorded 1bOpxR_6W424AEMv6l0m17nLkA8v_-A6V in state/uploaded.json
 
 [finish] Processed 1 video(s).
+
+===== RUN 2026-09-19T04:06:21.775984+00:00Z =====
+[start] max_uploads=1, dry_run=False
+[drive] Found 7 pending video(s) in Drive Inbox.
+
+-------- Processing: 57c8624b-9aee-4cd0-995f-9dff25708b93.mp4 (ID: 1T8QH98RUuuLM7DBGA6rXYKQtTtJV6XmY, Created: 2026-09-17T18:56:18.910Z) --------
+[drive] Downloading 57c8624b-9aee-4cd0-995f-9dff25708b93.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: video_ai_gemini
+[meta] Model used: gemini-flash-lite-latest
+[meta] Title (42 chars): Dubai Skyline Night View with Burj Khalifa
+[meta] Description:
+Breathtaking night view of the Dubai skyline featuring the illuminated Burj Khalifa glowing in purple lights. Experience the vibrant urban nightlife and iconic architecture of downtown Dubai.
+A stunning panoramic view showcasing modern skyscrapers, glowing streetlights, and luxurious city atmosphere from a high vantage point.
+
+#Dubai #BurjKhalifa #DubaiNight
+[meta] Tags (13 items, 165 chars): ['shorts', 'Dubai', 'Burj Khalifa', 'Dubai skyline', 'night view', 'Dubai luxury', 'skyscraper', 'Dubai at night', 'downtown Dubai', 'urban architecture', 'city lights', 'travel Dubai', 'luxury lifestyle']
+[meta] Hashtags: ['#Dubai', '#BurjKhalifa', '#DubaiNight']
+[yt] Uploading to YouTube...
+[yt] Published successfully: https://www.youtube.com/watch?v=JKzB9AAJ9ZM
+[ig] disabled by config.
+[drive] Moved 57c8624b-9aee-4cd0-995f-9dff25708b93.mp4 to 'Uploaded' subfolder.
+[state] Recorded 1T8QH98RUuuLM7DBGA6rXYKQtTtJV6XmY in state/uploaded.json
+
+[finish] Processed 1 video(s).
