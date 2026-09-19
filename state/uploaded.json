@@ -99,6 +99,16 @@
       "uploaded_at_utc": "2026-09-19T10:06:48.085543+00:00Z",
       "youtube_url": "https://www.youtube.com/watch?v=nqi68XGCsZ8",
       "youtube_video_id": "nqi68XGCsZ8"
+    },
+    {
+      "drive_file_id": "1nd_QUyfqMY7_NkbZbq8NrpIuBF_HSE2S",
+      "filename": "8765e0c7-04bd-4a71-9265-28dcce827f7d.mp4",
+      "instagram_id": null,
+      "instagram_permalink": "",
+      "title": "Dubai Skyline Sunset View",
+      "uploaded_at_utc": "2026-09-19T13:07:16.540896+00:00Z",
+      "youtube_url": "https://www.youtube.com/watch?v=ObUzFFiZ8O4",
+      "youtube_video_id": "ObUzFFiZ8O4"
     }
   ],
   "items": {
@@ -195,6 +205,16 @@
     "1jM0bszXkpG20icy7QUvkxeWo6Ntv0JYG": {
       "attempts": 1,
       "last_error": "Publishing blocked: text_ai_gemini not allowed for live publish"
+    },
+    "1nd_QUyfqMY7_NkbZbq8NrpIuBF_HSE2S": {
+      "drive_file_id": "1nd_QUyfqMY7_NkbZbq8NrpIuBF_HSE2S",
+      "filename": "8765e0c7-04bd-4a71-9265-28dcce827f7d.mp4",
+      "instagram_id": null,
+      "instagram_permalink": "",
+      "title": "Dubai Skyline Sunset View",
+      "uploaded_at_utc": "2026-09-19T13:07:16.540896+00:00Z",
+      "youtube_url": "https://www.youtube.com/watch?v=ObUzFFiZ8O4",
+      "youtube_video_id": "ObUzFFiZ8O4"
     },
     "1viXqX1YmPxNAN2PJZNHmiy6ATx_cm9Oz": {
       "drive_file_id": "1viXqX1YmPxNAN2PJZNHmiy6ATx_cm9Oz",
