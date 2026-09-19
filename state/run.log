@@ -584,3 +584,30 @@ Experience the modern luxury ambiance of Dubai's world-famous cityscape.
 [state] Recorded 1nd_QUyfqMY7_NkbZbq8NrpIuBF_HSE2S in state/uploaded.json
 
 [finish] Processed 1 video(s).
+
+===== RUN 2026-09-19T16:06:33.210393+00:00Z =====
+[start] max_uploads=1, dry_run=False
+[drive] Found 3 pending video(s) in Drive Inbox.
+
+-------- Processing: 09851e40-258e-4a29-853d-3e12897187e2.mp4 (ID: 1863HIQwxHo7-pCXhP_HFW6i5J1rfTfl3, Created: 2026-09-17T18:56:36.915Z) --------
+[drive] Downloading 09851e40-258e-4a29-853d-3e12897187e2.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: video_ai_gemini
+[meta] Model used: gemini-flash-lite-latest
+[meta] Title (43 chars): Dubai Skyline Sunset View from Rooftop Pool
+[meta] Description:
+Experience breathtaking sunset views over the glowing Dubai skyline from a luxurious rooftop pool terrace.
+Watch the iconic Burj Khalifa and surrounding skyscrapers light up as twilight falls.
+Discover high-end urban living and stunning architectural masterpieces in downtown Dubai.
+
+#DubaiSkyline #BurjKhalifa #LuxuryLifestyle
+[meta] Tags (13 items, 180 chars): ['shorts', 'dubai skyline', 'burj khalifa', 'dubai sunset', 'rooftop pool', 'luxury lifestyle', 'dubai architecture', 'downtown dubai', 'dubai travel', 'city lights', 'luxury real estate', 'evening views', 'skyscrapers']
+[meta] Hashtags: ['#DubaiSkyline', '#BurjKhalifa', '#LuxuryLifestyle']
+[yt] Uploading to YouTube...
+[yt] Published successfully: https://www.youtube.com/watch?v=kcvX8zu3BFM
+[ig] disabled by config.
+[drive] Moved 09851e40-258e-4a29-853d-3e12897187e2.mp4 to 'Uploaded' subfolder.
+[state] Recorded 1863HIQwxHo7-pCXhP_HFW6i5J1rfTfl3 in state/uploaded.json
+
+[finish] Processed 1 video(s).
