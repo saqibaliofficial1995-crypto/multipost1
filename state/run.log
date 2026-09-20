@@ -638,3 +638,29 @@ Discover more scenic city views and boat tours in Dubai.
 [state] Recorded 1WKuQyA5EEW0J7qHHCT8ElEtqyj7WoDXb in state/uploaded.json
 
 [finish] Processed 1 video(s).
+
+===== RUN 2026-09-20T07:06:02.122534+00:00Z =====
+[start] max_uploads=1, dry_run=False
+[drive] Found 1 pending video(s) in Drive Inbox.
+
+-------- Processing: 66c124ff-47be-4407-a5c7-633a42a5f6da.mp4 (ID: 1AiGW4NhWUv3qo6S0titGYe88UBDm6upf, Created: 2026-09-17T18:56:45.255Z) --------
+[drive] Downloading 66c124ff-47be-4407-a5c7-633a42a5f6da.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: video_ai_gemini
+[meta] Model used: gemini-flash-lite-latest
+[meta] Title (49 chars): Dubai Beach Walk at Sunset with Ferris Wheel View
+[meta] Description:
+Stroll along the stunning Dubai beach promenade at sunset featuring illuminated neon signs and a giant Ferris wheel in the distance. Experience the vibrant evening atmosphere and coastal views.
+Discover the lively beachfront walkway, modern architecture, and scenic twilight ambiance in Dubai.
+
+#Dubai #Beach #Sunset
+[meta] Tags (12 items, 176 chars): ['shorts', 'Dubai beach', 'Dubai sunset', 'beach promenade', 'Dubai walking tour', 'coastal Dubai', 'Dubai evening', 'Ferris wheel Dubai', 'Dubai lifestyle', 'beachfront Dubai', 'Dubai sightseeing', 'sunset walk']
+[meta] Hashtags: ['#Dubai', '#Beach', '#Sunset']
+[yt] Uploading to YouTube...
+[yt] Published successfully: https://www.youtube.com/watch?v=bUUQZg208fM
+[ig] disabled by config.
+[drive] Moved 66c124ff-47be-4407-a5c7-633a42a5f6da.mp4 to 'Uploaded' subfolder.
+[state] Recorded 1AiGW4NhWUv3qo6S0titGYe88UBDm6upf in state/uploaded.json
+
+[finish] Processed 1 video(s).
