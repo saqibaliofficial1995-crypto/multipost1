@@ -611,3 +611,30 @@ Discover high-end urban living and stunning architectural masterpieces in downto
 [state] Recorded 1863HIQwxHo7-pCXhP_HFW6i5J1rfTfl3 in state/uploaded.json
 
 [finish] Processed 1 video(s).
+
+===== RUN 2026-09-20T04:06:33.033737+00:00Z =====
+[start] max_uploads=1, dry_run=False
+[drive] Found 2 pending video(s) in Drive Inbox.
+
+-------- Processing: 8a0ea656-ddc8-472b-a6ac-cf1fdc8340b0.mp4 (ID: 1WKuQyA5EEW0J7qHHCT8ElEtqyj7WoDXb, Created: 2026-09-17T18:56:41.110Z) --------
+[drive] Downloading 8a0ea656-ddc8-472b-a6ac-cf1fdc8340b0.mp4...
+[ffmpeg] Normalizing to 1080x1920 30fps...
+[ffmpeg] Normalization complete.
+[meta] Path used: video_ai_gemini
+[meta] Model used: gemini-flash-lite-latest
+[meta] Title (36 chars): Evening Boat Ride Past Dubai Skyline
+[meta] Description:
+Experience a peaceful evening boat ride cruising past Dubai's illuminated waterfront architecture.
+Enjoy the stunning night views of modern luxury buildings from the water.
+Discover more scenic city views and boat tours in Dubai.
+
+#Dubai #YachtLife #Travel
+[meta] Tags (11 items, 190 chars): ['shorts', 'Dubai boat ride', 'Dubai skyline night', 'Dubai luxury lifestyle', 'Dubai waterfront', 'night cruise Dubai', 'Dubai architecture', 'evening yacht ride', 'Dubai travel', 'Dubai city lights', 'luxury living Dubai']
+[meta] Hashtags: ['#Dubai', '#YachtLife', '#Travel']
+[yt] Uploading to YouTube...
+[yt] Published successfully: https://www.youtube.com/watch?v=TrQ0v3eBJjw
+[ig] disabled by config.
+[drive] Moved 8a0ea656-ddc8-472b-a6ac-cf1fdc8340b0.mp4 to 'Uploaded' subfolder.
+[state] Recorded 1WKuQyA5EEW0J7qHHCT8ElEtqyj7WoDXb in state/uploaded.json
+
+[finish] Processed 1 video(s).
