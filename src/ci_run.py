@@ -220,9 +220,9 @@ def run(cfg, max_uploads=1, dry_run=False, channel=None, config_path=None):
             path_used = "sidecar_txt"
         else:
             channel_topic = cfg.get("metadata", {}).get("channel_topic", "")
-            if not channel_topic and pending:
+            if not channel_topic and pending_videos:
                 log.write("[topic] No channel_topic configured. Sampling up to 3 videos for topic inference...")
-                sample_names = [v.get("name") for v in pending[:3]]
+                sample_names = [v.get("name") for v in pending_videos[:3]]
                 channel_topic = llm_meta.infer_channel_topic(sample_names)
                 log.write(f"[topic] Automatically inferred channel topic: '{channel_topic}'")
                 cfg.setdefault("metadata", {})["channel_topic"] = channel_topic
