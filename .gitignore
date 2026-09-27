@@ -10,6 +10,8 @@ __pycache__/
 *.log
 !state/run.log
 .setup_state.json
+.setup_state_2.json
+work_2/
 
 # Secrets and credentials
 .temp_key.txt

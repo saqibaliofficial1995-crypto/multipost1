@@ -4,7 +4,7 @@ paths:
   log: state/run_2.log
   work: work_2
 drive:
-  inbox_folder_id: ''
+  inbox_folder_id: 1LN4V12fPNPxdgZKB9FSO2gydiWcf_mb2
 platforms:
   youtube: true
   instagram: false

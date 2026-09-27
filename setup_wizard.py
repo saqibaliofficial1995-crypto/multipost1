@@ -1,3 +1,11 @@
+import socket
+import urllib3.util.connection
+try:
+    urllib3.util.connection.allowed_gai_family = lambda: socket.AF_INET
+except Exception:
+    pass
+import os
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 #!/usr/bin/env python3
 """Multipost Setup Wizard — Interactive 8-Step Setup and Verification.
 
@@ -381,6 +389,10 @@ def step_4_instagram_setup(state):
     step_header(4, "Instagram API with Instagram Login", state.is_completed(4))
     if should_skip_step(state, 4):
         return
+    if ACTIVE_CHANNEL == 2:
+        print("--> Channel 2: Instagram is disabled by config. Skipping Step 4.")
+        state.mark_completed(4)
+        return
 
     import requests
 
@@ -672,6 +684,8 @@ def step_8_github_secrets(state):
             secrets_to_set[f"YT_CLIENT_SECRET{suffix}"] = yt_client_secret
             secrets_to_set[f"YT_REFRESH_TOKEN{suffix}"] = yt_refresh_token
         drive_folder = state.get_val("drive_folder_id")
+        if not drive_folder and ACTIVE_CHANNEL == 2:
+            drive_folder = "1LN4V12fPNPxdgZKB9FSO2gydiWcf_mb2"
         if drive_folder:
             secrets_to_set[f"DRIVE_FOLDER_ID{suffix}"] = drive_folder
 
@@ -743,7 +757,7 @@ def main():
         YT_TOKEN_FILE = TOKENS_DIR / "yt_token_2.json"
         CONFIG_FILE = Path("config.ci.channel2.yaml")
 
-    state = WizardState()
+    state = WizardState(STATE_FILE)
 
     if args.reset:
         state.reset()
