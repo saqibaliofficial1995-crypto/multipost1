@@ -1,0 +1,91 @@
+name: Daily Multipost Upload - Channel 2
+
+# Staggered cron schedule that NEVER overlaps with Channel 1 (Channel 1 runs at :00, Channel 2 runs at :30)
+# Channel 1: 0 4,7,10,13,16 * * *
+# Channel 2: 30 5,8,11,14,17 * * * (10:30, 13:30, 16:30, 19:30, 22:30 PKT)
+on:
+  schedule:
+    - cron: "30 5,8,11,14,17 * * *"
+  workflow_dispatch:
+    inputs:
+      max_uploads:
+        description: "Max videos for this run"
+        required: false
+        default: "1"
+      dry_run:
+        description: "true = test run without uploading"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: multipost-upload-channel-2
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Diagnose Gemini API Key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python scripts/diagnose_gemini.py
+
+      - name: Run uploader (Channel 2)
+        env:
+          # ---- Google Drive, YouTube & Gemini Secrets (suffixed _2) ----
+          YT_CLIENT_ID_2: ${{ secrets.YT_CLIENT_ID_2 }}
+          YT_CLIENT_SECRET_2: ${{ secrets.YT_CLIENT_SECRET_2 }}
+          YT_REFRESH_TOKEN_2: ${{ secrets.YT_REFRESH_TOKEN_2 }}
+          DRIVE_FOLDER_ID_2: ${{ secrets.DRIVE_FOLDER_ID_2 }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # ---- Run options ----
+          MAX_UPLOADS: ${{ github.event.inputs.max_uploads || '1' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: python src/ci_run.py --config config.ci.channel2.yaml --channel 2
+
+      - name: Commit state for Channel 2
+        if: always()
+        run: |
+          git config user.name "multipost-bot"
+          git config user.email "actions@github.com"
+          git add state/uploaded_2.json state/run_2.log config.ci.channel2.yaml || true
+          if git diff --staged --quiet; then
+            echo "koi state change nahi"
+          else
+            git commit -m "chore: multipost channel 2 state update [skip ci]"
+            git pull --rebase --autostash origin ${{ github.ref_name }} || true
+            git push
+          fi
+
+      - name: Upload run log as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multipost-channel2-log-${{ github.run_number }}
+          path: state/run_2.log
+          retention-days: 14
+          if-no-files-found: ignore

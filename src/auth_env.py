@@ -20,13 +20,14 @@ SCOPES = [
 ]
 
 
-def credentials_from_env():
-    client_id = os.environ.get("YT_CLIENT_ID")
-    client_secret = os.environ.get("YT_CLIENT_SECRET")
-    refresh_token = os.environ.get("YT_REFRESH_TOKEN")
+def credentials_from_env(channel=1):
+    suffix = f"_{channel}" if str(channel) == "2" else ""
+    client_id = os.environ.get(f"YT_CLIENT_ID{suffix}")
+    client_secret = os.environ.get(f"YT_CLIENT_SECRET{suffix}")
+    refresh_token = os.environ.get(f"YT_REFRESH_TOKEN{suffix}")
 
     if not (client_id and client_secret and refresh_token):
-        token_file = "tokens/yt_token.json"
+        token_file = f"tokens/yt_token{suffix}.json" if suffix else "tokens/yt_token.json"
         if os.path.exists(token_file):
             creds = Credentials.from_authorized_user_file(token_file, SCOPES)
             if creds and creds.expired and creds.refresh_token:
@@ -35,14 +36,14 @@ def credentials_from_env():
 
     missing = [
         k for k, v in {
-            "YT_CLIENT_ID": client_id,
-            "YT_CLIENT_SECRET": client_secret,
-            "YT_REFRESH_TOKEN": refresh_token,
+            f"YT_CLIENT_ID{suffix}": client_id,
+            f"YT_CLIENT_SECRET{suffix}": client_secret,
+            f"YT_REFRESH_TOKEN{suffix}": refresh_token,
         }.items() if not v
     ]
     if missing:
         raise RuntimeError(
-            "YouTube secrets missing: " + ", ".join(missing) +
+            f"YouTube secrets missing{f' for channel {channel}' if suffix else ''}: " + ", ".join(missing) +
             "\nGitHub repo -> Settings -> Secrets and variables -> Actions me daalo."
         )
 
@@ -57,8 +58,6 @@ def credentials_from_env():
     # Har run par fresh access token le lo (refresh token se, bina login ke)
     creds.refresh(Request())
     return creds
-
-
 def ig_access_token():
     token = os.environ.get("IG_ACCESS_TOKEN")
     if not token:

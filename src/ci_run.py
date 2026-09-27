@@ -101,7 +101,7 @@ def get_uploaded_ids(state):
     return uploaded
 
 
-def run(cfg, max_uploads=1, dry_run=False):
+def run(cfg, max_uploads=1, dry_run=False, channel=None, config_path=None):
     log = Log(cfg["paths"].get("log", "state/run.log"))
     state_file = cfg["paths"].get("state", "state/uploaded.json")
     state = load_state(state_file)
@@ -111,15 +111,21 @@ def run(cfg, max_uploads=1, dry_run=False):
     log.write(f"[start] max_uploads={max_uploads}, dry_run={dry_run}")
 
     # 1. Google Auth & Drive session
+    target_channel = channel or cfg.get("channel") or (2 if ("2" in os.path.basename(config_path or "")) else 1)
+    ch_suffix = f"_{target_channel}" if str(target_channel) == "2" else ""
     try:
-        creds = auth_env.credentials_from_env()
+        creds = auth_env.credentials_from_env(channel=target_channel)
         drive_session = drive_source.get_drive_session(creds.token)
     except Exception as e:
-        log.write(f"[fatal] Google authentication failed: {e}")
+        log.write(f"[fatal] Google authentication failed (channel {target_channel}): {e}")
         log.close()
         return 1
 
-    inbox_id = os.environ.get("DRIVE_FOLDER_ID") or cfg.get("drive", {}).get("inbox_folder_id")
+    inbox_id = (
+        os.environ.get(f"DRIVE_FOLDER_ID{ch_suffix}")
+        or os.environ.get("DRIVE_FOLDER_ID")
+        or cfg.get("drive", {}).get("inbox_folder_id")
+    )
     if not inbox_id:
         log.write("[fatal] DRIVE_FOLDER_ID is missing from environment and config.")
         log.close()
@@ -214,6 +220,19 @@ def run(cfg, max_uploads=1, dry_run=False):
             path_used = "sidecar_txt"
         else:
             channel_topic = cfg.get("metadata", {}).get("channel_topic", "")
+            if not channel_topic and pending:
+                log.write("[topic] No channel_topic configured. Sampling up to 3 videos for topic inference...")
+                sample_names = [v.get("name") for v in pending[:3]]
+                channel_topic = llm_meta.infer_channel_topic(sample_names)
+                log.write(f"[topic] Automatically inferred channel topic: '{channel_topic}'")
+                cfg.setdefault("metadata", {})["channel_topic"] = channel_topic
+                if config_path and os.path.exists(config_path):
+                    try:
+                        with open(config_path, "w", encoding="utf-8") as cf:
+                            yaml.dump(cfg, cf, default_flow_style=False, sort_keys=False)
+                        log.write(f"[topic] Saved inferred topic to {config_path}")
+                    except Exception as e:
+                        log.write(f"[warn] Could not save inferred topic to {config_path}: {e}")
             default_desc = cfg.get("metadata", {}).get("default_description", "")
             default_tags = cfg.get("metadata", {}).get("default_tags", ["shorts", "viral"])
             meta = llm_meta.generate_metadata(
@@ -386,6 +405,7 @@ def main():
     parser.add_argument("--config", default="config.ci.yaml", help="Path to YAML config")
     parser.add_argument("--max-uploads", type=int, default=None, help="Max videos to process this run")
     parser.add_argument("--dry-run", action="store_true", help="Test run without uploading")
+    parser.add_argument("--channel", type=int, default=None, choices=[1, 2], help="Target channel (1 or 2)")
     args = parser.parse_args()
 
     cfg = load_cfg(args.config)

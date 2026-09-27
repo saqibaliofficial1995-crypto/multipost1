@@ -614,3 +614,54 @@ def generate_metadata(video_path=None, filename="", duration=0, channel_topic=""
     res = fallback_metadata(duration, channel_topic, default_desc, default_tags)
     print(f"[llm_meta] Generated metadata via Tier 3 ({res['path_used']}).")
     return res
+
+
+def infer_channel_topic(sample_items, api_key=None):
+    """Samples up to 3 videos to infer the channel topic / niche using Gemini."""
+    key = api_key or os.environ.get("GEMINI_API_KEY")
+    if not sample_items:
+        return "General creator lifestyle"
+
+    items_to_sample = sample_items[:3]
+    titles = [os.path.splitext(os.path.basename(str(s)))[0] for s in items_to_sample]
+
+    if not key:
+        print("[llm_meta] GEMINI_API_KEY not set for topic inference. Using sample title theme.")
+        return titles[0].replace("_", " ").replace("-", " ")[:35]
+
+    try:
+        candidate_models = discover_models(key)
+        chosen_model = candidate_models[0]
+        prompt = (
+            "You are an AI assisting a YouTube channel automation system.\n"
+            "Analyze these sample video titles/files (up to 3) from the channel inbox:\n"
+            + "\n".join(f"- {t}" for t in titles) + "\n\n"
+            "Infer the overarching channel niche or topic in 2 to 5 words (e.g. 'Dubai luxury lifestyle', 'Minecraft gaming guides', 'Personal finance tips').\n"
+            "Return ONLY a JSON object in this format:\n"
+            '{"channel_topic": "..."}\n'
+            "Do not include markdown fences or any explanation."
+        )
+        gen_url = f"{BASE_API}/models/{chosen_model}:generateContent"
+        r = requests.post(
+            gen_url,
+            headers={"Content-Type": "application/json"},
+            params={"key": key},
+            json={
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"}
+            },
+            timeout=20
+        )
+        if r.status_code == 200:
+            data = r.json()
+            raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+            parsed = json.loads(raw_text)
+            topic = parsed.get("channel_topic", "").strip()
+            if topic:
+                print(f"[llm_meta] Inferred channel topic from {len(items_to_sample)} sample(s): '{topic}'")
+                return topic
+    except Exception as e:
+        print(f"[llm_meta] Topic inference call warning ({e}).")
+
+    fallback_topic = titles[0].replace("_", " ").replace("-", " ")[:35]
+    return fallback_topic

@@ -29,6 +29,7 @@ CLIENT_SECRET_FILE = TOKENS_DIR / "google_client_secret.json"
 YT_TOKEN_FILE = TOKENS_DIR / "yt_token.json"
 CONFIG_FILE = Path("config.yaml")
 CONFIG_EXAMPLE_FILE = Path("config.example.yaml")
+ACTIVE_CHANNEL = 1
 
 REQUIRED_YT_SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
@@ -353,10 +354,13 @@ def step_3_youtube_auth(state):
             ch_title = items[0].get("snippet", {}).get("title")
             print(f"  - Channel Title: {ch_title}")
             print(f"  - Channel ID: {ch_id}")
-            if ch_id == "UC6WQ7nljzB1DmVHP61LF3Ug":
-                print("  - Channel confirmation: MATCH (UC6WQ7nljzB1DmVHP61LF3Ug)")
+            if ACTIVE_CHANNEL == 1:
+                if ch_id == "UC6WQ7nljzB1DmVHP61LF3Ug":
+                    print("  - Channel confirmation: MATCH (UC6WQ7nljzB1DmVHP61LF3Ug)")
+                else:
+                    print(f"  - Channel confirmation: MISMATCH (expected UC6WQ7nljzB1DmVHP61LF3Ug, got {ch_id})")
             else:
-                print(f"  - Channel confirmation: MISMATCH (expected UC6WQ7nljzB1DmVHP61LF3Ug, got {ch_id})")
+                print(f"  - Channel confirmation: Channel 2 active ({ch_title}, ID: {ch_id})")
 
     state.mark_completed(3)
     print("\n[SUCCESS] YouTube & Drive OAuth completed and verified.\n")
@@ -662,10 +666,14 @@ def step_8_github_secrets(state):
         yt_client_secret = t_data.get("client_secret") or blob.get("client_secret")
         yt_refresh_token = t_data.get("refresh_token")
 
+        suffix = f"_{ACTIVE_CHANNEL}" if ACTIVE_CHANNEL == 2 else ""
         if yt_client_id and yt_client_secret and yt_refresh_token:
-            secrets_to_set["YT_CLIENT_ID"] = yt_client_id
-            secrets_to_set["YT_CLIENT_SECRET"] = yt_client_secret
-            secrets_to_set["YT_REFRESH_TOKEN"] = yt_refresh_token
+            secrets_to_set[f"YT_CLIENT_ID{suffix}"] = yt_client_id
+            secrets_to_set[f"YT_CLIENT_SECRET{suffix}"] = yt_client_secret
+            secrets_to_set[f"YT_REFRESH_TOKEN{suffix}"] = yt_refresh_token
+        drive_folder = state.get_val("drive_folder_id")
+        if drive_folder:
+            secrets_to_set[f"DRIVE_FOLDER_ID{suffix}"] = drive_folder
 
     # 2. Storage Secrets (if configured)
     if state.get_val("s3_configured"):
@@ -722,7 +730,18 @@ def main():
     parser.add_argument("--check", action="store_true", help="Run only Step 1 preflight checks and exit")
     parser.add_argument("--reset", action="store_true", help="Reset wizard progress state (.setup_state.json)")
     parser.add_argument("--stop-after-step", type=int, default=8, help="Stop wizard execution after specified step number (1-8)")
+    parser.add_argument("--channel", type=int, default=1, choices=[1, 2], help="Target channel number (1 or 2)")
     args = parser.parse_args()
+
+    global STATE_FILE, CLIENT_SECRET_FILE, YT_TOKEN_FILE, CONFIG_FILE, ACTIVE_CHANNEL
+    ACTIVE_CHANNEL = args.channel
+    if ACTIVE_CHANNEL == 2:
+        STATE_FILE = Path(".setup_state_2.json")
+        CLIENT_SECRET_FILE = TOKENS_DIR / "google_client_secret_2.json"
+        if not CLIENT_SECRET_FILE.exists() and (TOKENS_DIR / "google_client_secret.json").exists():
+            CLIENT_SECRET_FILE = TOKENS_DIR / "google_client_secret.json"
+        YT_TOKEN_FILE = TOKENS_DIR / "yt_token_2.json"
+        CONFIG_FILE = Path("config.ci.channel2.yaml")
 
     state = WizardState()
 
