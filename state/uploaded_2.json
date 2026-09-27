@@ -1,0 +1,9 @@
+{
+  "history": [],
+  "items": {
+    "1gTzlVrrbkEtedptRr3OcnG84jdURx4Hh": {
+      "attempts": 1,
+      "last_error": "YouTube secrets missing: YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN\nGitHub repo -> Settings -> Secrets and variables -> Actions me daalo."
+    }
+  }
+}
