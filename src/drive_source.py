@@ -56,22 +56,31 @@ def get_or_create_uploaded_folder(session, inbox_id):
 def list_pending_videos(session, inbox_id, uploaded_ids_set):
     """Lists video files in the inbox folder, sorted oldest first, excluding uploaded ones."""
     q = f"'{inbox_id}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'"
-    resp = session.get(
-        f"{DRIVE_API}/files",
-        params={
+    all_files = []
+    page_token = None
+
+    while True:
+        params = {
             "q": q,
             "spaces": "drive",
-            "fields": "files(id, name, mimeType, createdTime, size)",
+            "fields": "nextPageToken, files(id, name, mimeType, createdTime, size)",
             "pageSize": 100,
             "orderBy": "createdTime asc"
-        },
-        timeout=30
-    )
-    resp.raise_for_status()
-    files = resp.json().get("files", [])
+        }
+        if page_token:
+            params["pageToken"] = page_token
+
+        resp = session.get(f"{DRIVE_API}/files", params=params, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        all_files.extend(data.get("files", []))
+
+        page_token = data.get("nextPageToken")
+        if not page_token:
+            break
 
     candidates = []
-    for f in files:
+    for f in all_files:
         name = f.get("name", "")
         file_id = f.get("id", "")
         ext = os.path.splitext(name)[1].lower()
@@ -79,8 +88,8 @@ def list_pending_videos(session, inbox_id, uploaded_ids_set):
             if file_id not in uploaded_ids_set:
                 candidates.append(f)
 
-    # Sort oldest first by createdTime
-    candidates.sort(key=lambda x: x.get("createdTime", ""))
+    # Sort oldest first by createdTime deterministically (using (createdTime, id) as tiebreaker)
+    candidates.sort(key=lambda x: (x.get("createdTime", ""), x.get("id", "")))
     return candidates
 
 
