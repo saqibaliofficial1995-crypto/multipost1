@@ -93,10 +93,14 @@ def save_state(path, state):
 
 
 def get_uploaded_ids(state):
-    uploaded = set(state.get("items", {}).keys())
+    """Returns set of drive_file_ids that are confirmed published to YouTube."""
+    uploaded = set()
+    for fid, item in state.get("items", {}).items():
+        if isinstance(item, dict) and (item.get("youtube_video_id") or item.get("uploaded_at_utc")):
+            uploaded.add(fid)
     for item in state.get("history", []):
         fid = item.get("drive_file_id")
-        if fid:
+        if fid and (item.get("youtube_video_id") or item.get("uploaded_at_utc")):
             uploaded.add(fid)
     return uploaded
 
@@ -140,13 +144,34 @@ def run(cfg, max_uploads=1, dry_run=False, channel=None, config_path=None):
         log.close()
         return 1
 
-    log.write(f"[drive] Found {len(pending_videos)} pending video(s) in Drive Inbox.")
+    log.write(f"[drive] Found {len(pending_videos)} unuploaded video(s) in Drive Inbox.")
     if not pending_videos:
         log.write("[finish] Nothing to upload. Inbox is clear.")
         log.close()
         return 0
 
-    to_process = pending_videos[:max_uploads]
+    max_attempts = cfg.get("schedule", {}).get("max_attempts", 3)
+    eligible_videos = []
+    any_error = False
+
+    for vid_info in pending_videos:
+        fid = vid_info["id"]
+        fname = vid_info["name"]
+        item_state = state.get("items", {}).get(fid, {})
+        attempts = item_state.get("attempts", 0)
+        if attempts >= max_attempts:
+            last_err = item_state.get("last_error", "Unknown error")
+            log.write(f"[fail] Video '{fname}' ({fid}) reached max attempts ({attempts}/{max_attempts}). Skipping: {last_err}")
+            any_error = True
+        else:
+            eligible_videos.append(vid_info)
+
+    if not eligible_videos:
+        log.write(f"[finish] No eligible videos to process (all pending videos reached max {max_attempts} attempts).")
+        log.close()
+        return 1 if any_error else 0
+
+    to_process = eligible_videos[:max_uploads]
     uploaded_folder_id = None
     if not dry_run:
         try:
@@ -155,7 +180,6 @@ def run(cfg, max_uploads=1, dry_run=False, channel=None, config_path=None):
             log.write(f"[warn] Could not get/create 'Uploaded' subfolder: {e}")
 
     processed_count = 0
-    any_error = False
 
     for vid_info in to_process:
         file_id = vid_info["id"]
@@ -165,10 +189,8 @@ def run(cfg, max_uploads=1, dry_run=False, channel=None, config_path=None):
 
         item_state = state["items"].setdefault(file_id, {})
         attempts = item_state.get("attempts", 0)
-        max_attempts = cfg.get("schedule", {}).get("max_attempts", 3)
-        if attempts >= max_attempts:
-            log.write(f"[skip] Reached max attempts ({attempts}/{max_attempts}). Skipping file.")
-            continue
+        if attempts > 0:
+            log.write(f"[retry] Attempt {attempts + 1}/{max_attempts} for '{file_name}' (prior error: {item_state.get('last_error', 'none')})")
 
         # Download video & optional sidecar txt
         local_video = os.path.join(work_dir, file_name)
@@ -220,11 +242,10 @@ def run(cfg, max_uploads=1, dry_run=False, channel=None, config_path=None):
             path_used = "sidecar_txt"
         else:
             channel_topic = cfg.get("metadata", {}).get("channel_topic", "")
-            if not channel_topic and pending_videos:
-                log.write("[topic] No channel_topic configured. Sampling up to 3 videos for topic inference...")
-                sample_names = [v.get("name") for v in pending_videos[:3]]
-                channel_topic = llm_meta.infer_channel_topic(sample_names)
-                log.write(f"[topic] Automatically inferred channel topic: '{channel_topic}'")
+            if not channel_topic and norm_video and os.path.exists(norm_video):
+                log.write("[topic] No channel_topic configured. Gemini is watching the video to infer the channel topic...")
+                channel_topic = llm_meta.infer_topic_from_video(norm_video)
+                log.write(f"[topic] Automatically inferred channel topic from video visual content: '{channel_topic}'")
                 cfg.setdefault("metadata", {})["channel_topic"] = channel_topic
                 if config_path and os.path.exists(config_path):
                     try:
