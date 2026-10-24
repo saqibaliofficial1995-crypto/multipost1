@@ -20,3 +20,5 @@ work_2/
 *.token
 .env
 .env.*
+
+*.env
