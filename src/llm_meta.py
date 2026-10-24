@@ -663,5 +663,6 @@ def infer_channel_topic(sample_items, api_key=None):
     except Exception as e:
         print(f"[llm_meta] Topic inference call warning ({e}).")
 
+    print("[meta] topic fallback used", flush=True)
     fallback_topic = titles[0].replace("_", " ").replace("-", " ")[:35]
     return fallback_topic
