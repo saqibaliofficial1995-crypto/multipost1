@@ -368,7 +368,7 @@ def step_3_youtube_auth(state):
                 else:
                     print(f"  - Channel confirmation: MISMATCH (expected UC6WQ7nljzB1DmVHP61LF3Ug, got {ch_id})")
             else:
-                print(f"  - Channel confirmation: Channel 2 active ({ch_title}, ID: {ch_id})")
+                print(f"  - Channel confirmation: Channel 1 active ({ch_title}, ID: {ch_id})")
 
     state.mark_completed(3)
     print("\n[SUCCESS] YouTube & Drive OAuth completed and verified.\n")
@@ -390,7 +390,7 @@ def step_4_instagram_setup(state):
     if should_skip_step(state, 4):
         return
     if ACTIVE_CHANNEL == 2:
-        print("--> Channel 2: Instagram is disabled by config. Skipping Step 4.")
+        print("--> Channel 1: Instagram is disabled by config. Skipping Step 4.")
         state.mark_completed(4)
         return
 
